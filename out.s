@@ -24,7 +24,11 @@ main:
 	movq	$4, %r8
 	movq	%r8, x(%rip)
 	movq	x(%rip), %r8
-	movq	%r8, %rdi
+	movq	$4, %r9
+	cmpq	%r9, %r8
+	setge	%r9b
+	andq	$255,%r9
+	movq	%r9, %rdi
 	call	printint
 	movl	$0, %eax
 	popq	%rbp

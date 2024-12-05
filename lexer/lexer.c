@@ -3,6 +3,7 @@
 
 #include "lexer.h"
 #include "../common.h"
+#include "../misc/misc.h"
 
 static int charPos(char* str, int chr) {
   char* pchar = strchr(str, chr);
@@ -103,7 +104,35 @@ bool scan(Token* token) {
       token->type = TOKEN_SLASH;
       break;
     case '=':
-      token->type = TOKEN_EQUAL;
+      if ((c = next()) == '=') {
+        token->type = TOKEN_EQ;
+      } else {
+        putback(c);
+        token->type = TOKEN_EQUAL;
+      }
+      break;
+    case '!':
+      if ((c = next()) == '=') {
+        token->type = TOKEN_NE;
+      } else {
+        fatalc("Unrecognised character", c);
+      }
+      break;
+    case '<':
+      if ((c = next()) == '=') {
+        token->type = TOKEN_LE;
+      } else {
+        putback(c);
+        token->type = TOKEN_LT;
+      }
+      break;
+    case '>':
+      if ((c = next()) == '=') {
+        token->type = TOKEN_GE;
+      } else {
+        putback(c);
+        token->type = TOKEN_GT;
+      }
       break;
     case ':':
       token->type = TOKEN_COLON;

@@ -41,6 +41,18 @@ AstNodeOp getArithmeticOperation(TokenType token) {
       return AST_MULTIPLY;
     case TOKEN_SLASH:
       return AST_DIVIDE;
+    case TOKEN_EQ:
+      return AST_EQ;
+    case TOKEN_NE:
+      return AST_NE;
+    case TOKEN_LT:
+      return AST_LT;
+    case TOKEN_GT:
+      return AST_GT;
+    case TOKEN_LE:
+      return AST_LE;
+    case TOKEN_GE:
+      return AST_GE;
     default:
       fprintf(stderr, "Unknown token in getArithmeticOperation() on line %d\n", compiler->line);
       exit(1);
@@ -64,6 +76,18 @@ int generateAST(ASTNode* node, int reg) {
       return generateMultiplication(leftRegister, rightRegister);
     case AST_DIVIDE:
       return generateDivision(leftRegister, rightRegister);
+    case AST_EQ:
+      return generateEqualComparison(leftRegister, rightRegister);
+    case AST_NE:
+      return generateNotEqualComparison(leftRegister, rightRegister);
+    case AST_LT:
+      return generateLessThanComparison(leftRegister, rightRegister);
+    case AST_GT:
+      return generateGreaterThanComparison(leftRegister, rightRegister);
+    case AST_LE:
+      return generateLessThanOrEqualComparison(leftRegister, rightRegister);
+    case AST_GE:
+      return generateGreaterThanOrEqualComparison(leftRegister, rightRegister);
     case AST_INT_LIT:
       return generateLoadInteger(node->value.intvalue);
     case AST_IDENTIFIER:

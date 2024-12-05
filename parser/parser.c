@@ -9,8 +9,12 @@
 #include "../codegen/codegen.h"
 #include "../ast/ast.h"
 
-static int OpPrec[] = { 0, 10, 10, 20, 20,    0 };
-//                     EOF  +   -   *   /  INTLIT
+static int OpPrec[] = {
+  0, 10, 10,                    // T_EOF, T_PLUS, T_MINUS
+  20, 20,                       // T_STAR, T_SLASH
+  30, 30,                       // T_EQ, T_NE
+  40, 40, 40, 40                // T_LT, T_GT, T_LE, T_GE
+};
 
 void advance() {
   scan(&compiler->current);
@@ -37,7 +41,7 @@ void parseIdentifier() {
   match(TOKEN_IDENTIFIER, "identifier");
 }
 
-static int getOpPrecedence(int tokenType) {
+static int getOpPrecedence(TokenType tokenType) {
   int precedence = OpPrec[tokenType];
   if (precedence == 0) {
     fprintf(stderr, "Syntax error on line %d: invalid token %d\n", compiler->line, tokenType);

@@ -7,11 +7,20 @@
 #include "../common.h"
 
 typedef enum AstNodeOp {
-  AST_ADD, 
+  AST_ADD = 1, 
   AST_SUBTRACT,
   AST_MULTIPLY,
   AST_DIVIDE,
+  
+  AST_EQ,
+  AST_NE,
+  AST_LT,
+  AST_GT,
+  AST_LE,
+  AST_GE,
+
   AST_INT_LIT,
+
   AST_IDENTIFIER,
   AST_LVIDENT,
   AST_ASSIGN

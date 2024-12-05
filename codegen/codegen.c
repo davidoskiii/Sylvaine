@@ -7,6 +7,7 @@
 
 static bool registerAvailability[4];
 static char* registerNames[4] = { "%r8", "%r9", "%r10", "%r11" };
+static char* bregisterNames[4] = { "%r8b", "%r9b", "%r10b", "%r11b" };
 
 void freeRegisters() {
   for (int i = 0; i < 4; i++) {
@@ -100,6 +101,38 @@ int generateDivision(int reg1, int reg2) {
   fprintf(compiler->fileO, "\tmovq\t%%rax, %s\n", registerNames[reg1]);
   freeRegister(reg2);
   return reg1;
+}
+
+static int compareRegisters(int reg1, int reg2, char *condition) {
+  fprintf(compiler->fileO, "\tcmpq\t%s, %s\n", registerNames[reg2], registerNames[reg1]);
+  fprintf(compiler->fileO, "\t%s\t%s\n", condition, bregisterNames[reg2]);
+  fprintf(compiler->fileO, "\tandq\t$255,%s\n", registerNames[reg2]);
+  freeRegister(reg1);
+  return reg2;
+}
+
+int generateEqualComparison(int reg1, int reg2) {
+  return compareRegisters(reg1, reg2, "sete");
+}
+
+int generateNotEqualComparison(int reg1, int reg2) {
+  return compareRegisters(reg1, reg2, "setne");
+}
+
+int generateLessThanComparison(int reg1, int reg2) {
+  return compareRegisters(reg1, reg2, "setl");
+}
+
+int generateGreaterThanComparison(int reg1, int reg2) {
+  return compareRegisters(reg1, reg2, "setg");
+}
+
+int generateLessThanOrEqualComparison(int reg1, int reg2) {
+  return compareRegisters(reg1, reg2, "setle");
+}
+
+int generateGreaterThanOrEqualComparison(int reg1, int reg2) {
+  return compareRegisters(reg1, reg2, "setge");
 }
 
 void generatePrintInteger(int reg) {
