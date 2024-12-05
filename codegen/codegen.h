@@ -3,9 +3,6 @@
 
 #include "../ast/ast.h"
 
-
-void generateCode(ASTNode* node);
-
 void freeRegisters();
 void generateAssemblyPreamble();
 void generateAssemblyPostamble();
@@ -18,5 +15,8 @@ int generateDivision(int reg1, int reg2);
 
 void generatePrintInteger(int reg);
 
+int loadGlobalSymbol(char* identifier);
+int storeGlobalSymbol(int reg, char* identifier);
+void generateGlobalSymbol(char* symbol);
 
 #endif

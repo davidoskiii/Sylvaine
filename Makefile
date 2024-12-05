@@ -1,5 +1,5 @@
-build: main.c codegen/codegen.c lexer/lexer.c ast/ast.c parser/parser.c
-	gcc -o sylvaine -g main.c codegen/codegen.c lexer/lexer.c ast/ast.c parser/parser.c
+build: main.c misc/misc.c symbol/symbol.c codegen/codegen.c lexer/lexer.c ast/ast.c parser/parser.c
+	gcc -o sylvaine -g main.c misc/misc.c symbol/symbol.c codegen/codegen.c lexer/lexer.c ast/ast.c parser/parser.c
 
 clear:
 	rm -f out *.o out.s

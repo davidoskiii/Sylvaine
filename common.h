@@ -9,6 +9,7 @@
 
 #define ALLOCATE(type) (type*)malloc(sizeof(type))
 #define TEXTLEN 512
+#define NSYMBOLS 512
 
 typedef struct Compiler {
   int line;

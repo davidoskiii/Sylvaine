@@ -2,6 +2,7 @@
 
 #include "../common.h"
 #include "../lexer/lexer.h"
+#include "../symbol/symbol.h"
 #include "../codegen/codegen.h"
 
 ASTNode* createNode(AstNodeOp op, ASTNode* left, ASTNode* right, int value) {
@@ -15,7 +16,7 @@ ASTNode* createNode(AstNodeOp op, ASTNode* left, ASTNode* right, int value) {
   node->op = op;
   node->left = left;
   node->right = right;
-  node->intvalue = value;
+  node->value.intvalue = value;
   return node;
 }
 
@@ -46,13 +47,13 @@ AstNodeOp getArithmeticOperation(TokenType token) {
   }
 }
 
-int generateAST(ASTNode* node) {
+int generateAST(ASTNode* node, int reg) {
   int leftRegister, rightRegister;
 
   if (node->left)
-    leftRegister = generateAST(node->left);
+    leftRegister = generateAST(node->left, -1);
   if (node->right)
-    rightRegister = generateAST(node->right);
+    rightRegister = generateAST(node->right, leftRegister);
 
   switch (node->op) {
     case AST_ADD:
@@ -64,7 +65,13 @@ int generateAST(ASTNode* node) {
     case AST_DIVIDE:
       return generateDivision(leftRegister, rightRegister);
     case AST_INT_LIT:
-      return generateLoadInteger(node->intvalue);
+      return generateLoadInteger(node->value.intvalue);
+    case AST_IDENTIFIER:
+      return loadGlobalSymbol(globalSymbolTable[node->value.id].name);
+    case AST_LVIDENT:
+      return storeGlobalSymbol(reg, globalSymbolTable[node->value.id].name);
+    case AST_ASSIGN:
+      return rightRegister;
     default:
       fprintf(stderr, "Unknown AST operation %d\n", node->op);
       exit(1);

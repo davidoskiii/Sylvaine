@@ -11,14 +11,20 @@ typedef enum AstNodeOp {
   AST_SUBTRACT,
   AST_MULTIPLY,
   AST_DIVIDE,
-  AST_INT_LIT
+  AST_INT_LIT,
+  AST_IDENTIFIER,
+  AST_LVIDENT,
+  AST_ASSIGN
 } AstNodeOp;
 
 typedef struct ASTNode {
   AstNodeOp op;
   struct ASTNode* left;
   struct ASTNode* right;
-  int intvalue;
+  union {
+    int intvalue;
+    int id;
+  } value;
 } ASTNode;
 
 ASTNode* createNode(AstNodeOp op, ASTNode* left, ASTNode* right, int value);
@@ -26,6 +32,6 @@ ASTNode* createLeafNode(AstNodeOp op, int value);
 ASTNode* createUnaryNode(AstNodeOp op, ASTNode* child, int value);
 AstNodeOp getArithmeticOperation(TokenType token);
 
-int generateAST(ASTNode* node);
+int generateAST(ASTNode* node, int reg);
 
 #endif

@@ -8,15 +8,6 @@
 static bool registerAvailability[4];
 static char* registerNames[4] = { "%r8", "%r9", "%r10", "%r11" };
 
-void generateCode(ASTNode* node) {
-  int reg;
-
-  generateAssemblyPreamble();
-  reg= generateAST(node);
-  generatePrintInteger(reg);
-  generateAssemblyPostamble();
-}
-
 void freeRegisters() {
   for (int i = 0; i < 4; i++) {
     registerAvailability[i] = true;
@@ -115,4 +106,19 @@ void generatePrintInteger(int reg) {
   fprintf(compiler->fileO, "\tmovq\t%s, %%rdi\n", registerNames[reg]);
   fprintf(compiler->fileO, "\tcall\tprintint\n");
   freeRegister(reg);
+}
+
+int loadGlobalSymbol(char* identifier) {
+  int reg = allocateRegister();
+  fprintf(compiler->fileO, "\tmovq\t%s(\%%rip), %s\n", identifier, registerNames[reg]);
+  return reg;
+}
+
+int storeGlobalSymbol(int reg, char* identifier) {
+  fprintf(compiler->fileO, "\tmovq\t%s, %s(\%%rip)\n", registerNames[reg], identifier);
+  return reg;
+}
+
+void generateGlobalSymbol(char* symbol) {
+  fprintf(compiler->fileO, "\t.comm\t%s,8,8\n", symbol);
 }

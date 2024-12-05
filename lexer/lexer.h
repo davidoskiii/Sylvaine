@@ -13,7 +13,13 @@ typedef enum TokenType {
   TOKEN_SLASH,
   TOKEN_INT_LIT,
   TOKEN_SEMICOLON,
-  TOKEN_PRINT
+  TOKEN_EQUAL,
+  TOKEN_COLON,
+  TOKEN_IDENTIFIER,
+
+  TOKEN_PRINT,
+  TOKEN_LET,
+  TOKEN_INT
 } TokenType;
 
 typedef struct Token {

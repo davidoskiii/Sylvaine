@@ -66,11 +66,16 @@ static int scanidentifier(int currentChar, char *buffer, int limit) {
   return length;
 }
 
-static TokenType getKeywordToken(char *word) {
+static TokenType getKeywordToken(char* word) {
   switch (*word) {
     case 'p':
-      if (!strcmp(word, "print"))
-        return TOKEN_PRINT;
+      if (!strcmp(word, "print")) return TOKEN_PRINT;
+      break;
+    case 'i':
+      if (!strcmp(word, "int")) return (TOKEN_INT);
+      break;
+    case 'l':
+      if (!strcmp(word, "let")) return (TOKEN_LET);
       break;
   }
   return 0;
@@ -97,6 +102,12 @@ bool scan(Token* token) {
     case '/':
       token->type = TOKEN_SLASH;
       break;
+    case '=':
+      token->type = TOKEN_EQUAL;
+      break;
+    case ':':
+      token->type = TOKEN_COLON;
+      break;
     case ';':
       token->type = TOKEN_SEMICOLON;
       break;
@@ -113,8 +124,9 @@ bool scan(Token* token) {
           token->type= tokenType;
           break;
         }
-        printf("Unrecognised symbol %s on line %d\n", compiler->buffer, compiler->line);
-        exit(1);
+
+        token->type = TOKEN_IDENTIFIER;
+        break;
       }
       printf("Unrecognised character %c on line %d\n", c, compiler->line);
       exit(1);

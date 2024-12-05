@@ -4,6 +4,8 @@
 #include "parser.h"
 #include "../common.h"
 #include "../lexer/lexer.h"
+#include "../misc/misc.h"
+#include "../symbol/symbol.h"
 #include "../codegen/codegen.h"
 #include "../ast/ast.h"
 
@@ -19,6 +21,10 @@ void match(int tokenType, char *expected) {
   }
 }
 
+void parseIdentifier() {
+  match(TOKEN_IDENTIFIER, "identifier");
+}
+
 static int getOpPrecedence(int tokenType) {
   int precedence = OpPrec[tokenType];
   if (precedence == 0) {
@@ -30,32 +36,93 @@ static int getOpPrecedence(int tokenType) {
 
 static ASTNode* parsePrimary() {
   ASTNode* node;
+  int id;
 
   switch (compiler->current.type) {
     case TOKEN_INT_LIT:
       node = createLeafNode(AST_INT_LIT, compiler->current.intvalue);
-      scan(&compiler->current);
-      return node;
-    default:
-      fprintf(stderr, "syntax error on line %d\n", compiler->line);
-      exit(1);
+      break;
+    case TOKEN_IDENTIFIER:
+      id = findGlobalSymbol(compiler->buffer);
+      if (id == -1) fatals("Unknown variable", compiler->buffer);
+
+      node = createLeafNode(AST_IDENTIFIER, id);
+      break;
+    default: fatald("Syntax error, token", compiler->current.type);
   }
+
+  scan(&compiler->current);
+  return node;
 }
 
-void parseStatements() {
+void parsePrintStatement() {
   ASTNode* tree;
   int reg;
 
-  while (true) {
-    match(TOKEN_PRINT, "print");
-    tree = parseBinaryExpression(0);
-    reg = generateAST(tree);
-    generatePrintInteger(reg);
-    freeRegisters();
+  match(TOKEN_PRINT, "print");
 
-    match(TOKEN_SEMICOLON, ";");
-    if (compiler->current.type == TOKEN_EOF)
+  tree = parseBinaryExpression(0);
+  reg = generateAST(tree, -1);
+  generatePrintInteger(reg);
+  freeRegisters();
+
+  match(TOKEN_SEMICOLON, ";");
+}
+
+void parseVarDeclaration() {
+  match(TOKEN_LET, "let");
+  
+  parseIdentifier();
+
+  addGlobalSymbol(compiler->buffer);
+  generateGlobalSymbol(compiler->buffer);
+
+  match(TOKEN_COLON, ":");
+  match(TOKEN_INT, "int");
+
+  match(TOKEN_SEMICOLON, ";");
+}
+
+void parseAssignmentStatement() {
+  ASTNode *left, *right, *tree;
+  int id;
+
+  parseIdentifier();
+
+  if ((id = findGlobalSymbol(compiler->buffer)) == -1) {
+    fatals("Undeclared variable", compiler->buffer);
+  }
+  right = createLeafNode(AST_LVIDENT, id);
+
+  match(TOKEN_EQUAL, "=");
+
+  left = parseBinaryExpression(0);
+
+  tree = createNode(AST_ASSIGN, left, right, 0);
+
+  generateAST(tree, -1);
+  freeRegisters();
+
+  match(TOKEN_SEMICOLON, ";");
+}
+
+void parseStatements() {
+  while (true) {
+    switch (compiler->current.type) {
+    case TOKEN_PRINT:
+      parsePrintStatement();
+      break;
+    case TOKEN_LET:
+      parseVarDeclaration();
+      break;
+    case TOKEN_IDENTIFIER:
+      parseAssignmentStatement();
+      break;
+    case TOKEN_EOF:
       return;
+    default:
+      fatald("Syntax error, token", compiler->current.type);
+    }
   }
 }
 
