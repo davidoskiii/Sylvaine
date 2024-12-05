@@ -5,6 +5,18 @@
 #include "../lexer/lexer.h"
 #include "../ast/ast.h"
 
+static int OpPrec[] = { 0, 10, 10, 20, 20,    0 };
+//                     EOF  +   -   *   /  INTLIT
+
+static int getOpPrecedence(int tokenType) {
+  int precedence = OpPrec[tokenType];
+  if (precedence == 0) {
+    fprintf(stderr, "Syntax error on line %d: invalid token %d\n", compiler->line, tokenType);
+    exit(1);
+  }
+  return precedence;
+}
+
 static ASTNode* parsePrimary() {
   ASTNode* node;
 
@@ -19,22 +31,29 @@ static ASTNode* parsePrimary() {
   }
 }
 
-
-ASTNode* parseBinaryExpression() {
-  ASTNode *node, *leftNode, *rightNode;
-  AstNodeOp nodeType;
+ASTNode* parseBinaryExpression(int previousPrecedence) {
+  ASTNode *leftNode, *rightNode;
+  int tokenType;
 
   leftNode = parsePrimary();
 
-  if (compiler->current.type == TOKEN_EOF) return leftNode;
+  tokenType = compiler->current.type;
+  if (tokenType == TOKEN_EOF)
+    return leftNode;
 
-  nodeType = getArithmeticOperation(compiler->current.type);
+  while (getOpPrecedence(tokenType) > previousPrecedence) {
+    scan(&compiler->current);
 
-  scan(&compiler->current);
+    rightNode = parseBinaryExpression(OpPrec[tokenType]);
 
-  rightNode = parseBinaryExpression();
+    leftNode = createNode(getArithmeticOperation(tokenType), leftNode, rightNode, 0);
 
-  node = createNode(nodeType, leftNode, rightNode, 0);
-  return node;
+    tokenType = compiler->current.type;
+    if (tokenType == TOKEN_EOF)
+      return leftNode;
+  }
+
+  // Return the tree when the precedence is the same or lower
+  return leftNode;
 }
 

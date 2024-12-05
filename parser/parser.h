@@ -7,6 +7,6 @@
 #include "../common.h"
 #include "../ast/ast.h"
 
-ASTNode* parseBinaryExpression();
+ASTNode* parseBinaryExpression(int previousPrecedence);
 
 #endif

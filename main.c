@@ -35,7 +35,7 @@ int main(int argc, char *argv[]) {
   }
 
   scan(&compiler->current);
-  node = parseBinaryExpression();
+  node = parseBinaryExpression(0);
   printf("%d\n", interpretAST(node));
   exit(0);
   return 0;
