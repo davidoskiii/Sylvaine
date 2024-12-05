@@ -12,12 +12,24 @@
 static int OpPrec[] = { 0, 10, 10, 20, 20,    0 };
 //                     EOF  +   -   *   /  INTLIT
 
-void match(int tokenType, char *expected) {
+void advance() {
+  scan(&compiler->current);
+}
+
+void match(int tokenType, char* expected) {
   if (compiler->current.type == tokenType) {
-    scan(&compiler->current);
+    advance();
   } else {
     printf("%s expected on line %d\n", expected, compiler->line);
     exit(1);
+  }
+}
+
+bool check(int tokenType) {
+  if (compiler->current.type == tokenType) {
+    return true;
+  } else {
+    return false;
   }
 }
 
@@ -51,7 +63,7 @@ static ASTNode* parsePrimary() {
     default: fatald("Syntax error, token", compiler->current.type);
   }
 
-  scan(&compiler->current);
+  advance();
   return node;
 }
 
@@ -70,6 +82,8 @@ void parsePrintStatement() {
 }
 
 void parseVarDeclaration() {
+  int id;
+
   match(TOKEN_LET, "let");
   
   parseIdentifier();
@@ -77,8 +91,27 @@ void parseVarDeclaration() {
   addGlobalSymbol(compiler->buffer);
   generateGlobalSymbol(compiler->buffer);
 
+  if ((id = findGlobalSymbol(compiler->buffer)) == -1) {
+    fatals("Undeclared variable", compiler->buffer);
+  }
+
   match(TOKEN_COLON, ":");
   match(TOKEN_INT, "int");
+
+  if (check(TOKEN_EQUAL)) {
+    ASTNode *left, *right, *tree;
+
+    right = createLeafNode(AST_LVIDENT, id);
+
+    match(TOKEN_EQUAL, "=");
+
+    left = parseBinaryExpression(0);
+
+    tree = createNode(AST_ASSIGN, left, right, 0);
+
+    generateAST(tree, -1);
+    freeRegisters();
+  }
 
   match(TOKEN_SEMICOLON, ";");
 }
@@ -137,7 +170,7 @@ ASTNode* parseBinaryExpression(int previousPrecedence) {
     return leftNode;
 
   while (getOpPrecedence(tokenType) > previousPrecedence) {
-    scan(&compiler->current);
+    advance();
 
     rightNode = parseBinaryExpression(OpPrec[tokenType]);
 

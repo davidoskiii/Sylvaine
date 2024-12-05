@@ -40,7 +40,7 @@ int main(int argc, char *argv[]) {
   }
 
 
-  scan(&compiler->current);
+  advance();
   generateAssemblyPreamble();
   parseStatements();
   generateAssemblyPostamble();
