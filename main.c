@@ -2,6 +2,7 @@
 #include <errno.h>
 
 #include "common.h"
+#include "codegen/codegen.h"
 #include "lexer/lexer.h"
 #include "ast/ast.h"
 #include "parser/parser.h"
@@ -14,6 +15,7 @@ static void init() {
   compiler->line = 1;
   compiler->putback = '\n';
   compiler->fileI = NULL;
+  compiler->fileO = NULL;
 }
 
 static void usage(char* prog) {
@@ -34,9 +36,15 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
 
+  if ((compiler->fileO = fopen("out.s", "w")) == NULL) {
+    fprintf(stderr, "Unable to create out.s: %s\n", strerror(errno));
+    exit(1);
+  }
+
   scan(&compiler->current);
   node = parseBinaryExpression(0);
-  printf("%d\n", interpretAST(node));
+  generateCode(node);
+
+  fclose(compiler->fileO);
   exit(0);
-  return 0;
 }

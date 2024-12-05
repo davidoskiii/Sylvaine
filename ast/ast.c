@@ -1,7 +1,8 @@
 #include "ast.h"
-#include "../common.h"
 
+#include "../common.h"
 #include "../lexer/lexer.h"
+#include "../codegen/codegen.h"
 
 ASTNode* createNode(AstNodeOp op, ASTNode* left, ASTNode* right, int value) {
   ASTNode* node = ALLOCATE(ASTNode);
@@ -45,30 +46,27 @@ AstNodeOp getArithmeticOperation(TokenType token) {
   }
 }
 
-int interpretAST(ASTNode *node) {
-  int leftValue = 0, rightValue = 0;
+int generateAST(ASTNode* node) {
+  int leftRegister, rightRegister;
 
-  // Evaluate the left and right sub-trees
   if (node->left)
-    leftValue = interpretAST(node->left);
+    leftRegister = generateAST(node->left);
   if (node->right)
-    rightValue = interpretAST(node->right);
+    rightRegister = generateAST(node->right);
 
-  // Perform the operation based on the node type
   switch (node->op) {
     case AST_ADD:
-      return leftValue + rightValue;
+      return generateAddition(leftRegister, rightRegister);
     case AST_SUBTRACT:
-      return leftValue - rightValue;
+      return generateSubtraction(leftRegister, rightRegister);
     case AST_MULTIPLY:
-      return leftValue * rightValue;
+      return generateMultiplication(leftRegister, rightRegister);
     case AST_DIVIDE:
-      return leftValue / rightValue;
+      return generateDivision(leftRegister, rightRegister);
     case AST_INT_LIT:
-      return node->intvalue;
+      return generateLoadInteger(node->intvalue);
     default:
-      fprintf(stderr, "Unknown AST operator %d\n", node->op);
+      fprintf(stderr, "Unknown AST operation %d\n", node->op);
       exit(1);
   }
 }
-

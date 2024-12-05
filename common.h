@@ -14,6 +14,7 @@ typedef struct Compiler {
   int putback;
   Token current;
   FILE* fileI;
+  FILE* fileO;
 } Compiler;
 
 extern Compiler* compiler;

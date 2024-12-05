@@ -26,6 +26,6 @@ ASTNode* createLeafNode(AstNodeOp op, int value);
 ASTNode* createUnaryNode(AstNodeOp op, ASTNode* child, int value);
 AstNodeOp getArithmeticOperation(TokenType token);
 
-int interpretAST(ASTNode *node);
+int generateAST(ASTNode* node);
 
 #endif
