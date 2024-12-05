@@ -6,7 +6,7 @@
 
 void generateCode(ASTNode* node);
 
-void resetAllRegisters();
+void freeRegisters();
 void generateAssemblyPreamble();
 void generateAssemblyPostamble();
 

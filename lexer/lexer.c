@@ -49,9 +49,37 @@ static int scanint(int chr) {
   return result;
 }
 
+static int scanidentifier(int currentChar, char *buffer, int limit) {
+  int length = 0;
+
+  while (isalpha(currentChar) || isdigit(currentChar) || currentChar == '_') {
+    if (length >= limit - 1) {
+      printf("Identifier too long on line %d\n", compiler->line);
+      exit(1);
+    }
+    buffer[length++] = currentChar;
+    currentChar = next();
+  }
+
+  putback(currentChar);
+  buffer[length] = '\0';
+  return length;
+}
+
+static TokenType getKeywordToken(char *word) {
+  switch (*word) {
+    case 'p':
+      if (!strcmp(word, "print"))
+        return TOKEN_PRINT;
+      break;
+  }
+  return 0;
+}
+
 
 bool scan(Token* token) {
   int c = skip();
+  TokenType tokenType;
 
   switch (c) {
     case EOF:
@@ -69,16 +97,27 @@ bool scan(Token* token) {
     case '/':
       token->type = TOKEN_SLASH;
       break;
-    default: {
+    case ';':
+      token->type = TOKEN_SEMICOLON;
+      break;
+    default:
+
       if (isdigit(c)) {
         token->intvalue = scanint(c);
         token->type = TOKEN_INT_LIT;
         break;
-      }
+      } else if (isalpha(c) || '_' == c) {
+        scanidentifier(c, compiler->buffer, TEXTLEN);
 
+        if ((tokenType = getKeywordToken(compiler->buffer))) {
+          token->type= tokenType;
+          break;
+        }
+        printf("Unrecognised symbol %s on line %d\n", compiler->buffer, compiler->line);
+        exit(1);
+      }
       printf("Unrecognised character %c on line %d\n", c, compiler->line);
       exit(1);
-    }
   }
 
   return true;

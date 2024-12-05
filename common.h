@@ -8,11 +8,15 @@
 #include "lexer/lexer.h"
 
 #define ALLOCATE(type) (type*)malloc(sizeof(type))
+#define TEXTLEN 512
 
 typedef struct Compiler {
   int line;
   int putback;
+  char buffer[TEXTLEN + 1];
+
   Token current;
+
   FILE* fileI;
   FILE* fileO;
 } Compiler;

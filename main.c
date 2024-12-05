@@ -24,8 +24,6 @@ static void usage(char* prog) {
 }
 
 int main(int argc, char *argv[]) {
-  ASTNode* node;
-
   if (argc != 2)
     usage(argv[0]);
 
@@ -41,9 +39,11 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
 
+
   scan(&compiler->current);
-  node = parseBinaryExpression(0);
-  generateCode(node);
+  generateAssemblyPreamble();
+  parseStatements();
+  generateAssemblyPostamble();
 
   fclose(compiler->fileO);
   exit(0);

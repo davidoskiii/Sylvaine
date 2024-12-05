@@ -5,7 +5,7 @@
 #include "../common.h"
 #include "../ast/ast.h"
 
-static int registerAvailability[4];
+static bool registerAvailability[4];
 static char* registerNames[4] = { "%r8", "%r9", "%r10", "%r11" };
 
 void generateCode(ASTNode* node) {
@@ -17,16 +17,16 @@ void generateCode(ASTNode* node) {
   generateAssemblyPostamble();
 }
 
-void resetAllRegisters() {
+void freeRegisters() {
   for (int i = 0; i < 4; i++) {
-    registerAvailability[i] = 1;
+    registerAvailability[i] = true;
   }
 }
 
 static int allocateRegister() {
   for (int i = 0; i < 4; i++) {
     if (registerAvailability[i]) {
-      registerAvailability[i] = 0;
+      registerAvailability[i] = false;
       return i;
     }
   }
@@ -35,15 +35,15 @@ static int allocateRegister() {
 }
 
 static void freeRegister(int reg) {
-  if (registerAvailability[reg] != 0) {
+  if (registerAvailability[reg] != false) {
     fprintf(stderr, "Error: Attempt to free already free register %d\n", reg);
     exit(1);
   }
-  registerAvailability[reg] = 1;
+  registerAvailability[reg] = true;
 }
 
 void generateAssemblyPreamble() {
-  resetAllRegisters();
+  freeRegisters();
   fputs(
     "\t.text\n"
     ".LC0:\n"

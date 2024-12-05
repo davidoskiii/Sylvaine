@@ -4,10 +4,20 @@
 #include "parser.h"
 #include "../common.h"
 #include "../lexer/lexer.h"
+#include "../codegen/codegen.h"
 #include "../ast/ast.h"
 
 static int OpPrec[] = { 0, 10, 10, 20, 20,    0 };
 //                     EOF  +   -   *   /  INTLIT
+
+void match(int tokenType, char *expected) {
+  if (compiler->current.type == tokenType) {
+    scan(&compiler->current);
+  } else {
+    printf("%s expected on line %d\n", expected, compiler->line);
+    exit(1);
+  }
+}
 
 static int getOpPrecedence(int tokenType) {
   int precedence = OpPrec[tokenType];
@@ -32,14 +42,31 @@ static ASTNode* parsePrimary() {
   }
 }
 
+void parseStatements() {
+  ASTNode* tree;
+  int reg;
+
+  while (true) {
+    match(TOKEN_PRINT, "print");
+    tree = parseBinaryExpression(0);
+    reg = generateAST(tree);
+    generatePrintInteger(reg);
+    freeRegisters();
+
+    match(TOKEN_SEMICOLON, ";");
+    if (compiler->current.type == TOKEN_EOF)
+      return;
+  }
+}
+
 ASTNode* parseBinaryExpression(int previousPrecedence) {
   ASTNode *leftNode, *rightNode;
-  int tokenType;
+  TokenType tokenType;
 
   leftNode = parsePrimary();
 
   tokenType = compiler->current.type;
-  if (tokenType == TOKEN_EOF)
+  if (tokenType == TOKEN_SEMICOLON)
     return leftNode;
 
   while (getOpPrecedence(tokenType) > previousPrecedence) {
@@ -50,7 +77,7 @@ ASTNode* parseBinaryExpression(int previousPrecedence) {
     leftNode = createNode(getArithmeticOperation(tokenType), leftNode, rightNode, 0);
 
     tokenType = compiler->current.type;
-    if (tokenType == TOKEN_EOF)
+    if (tokenType == TOKEN_SEMICOLON)
       return leftNode;
   }
 

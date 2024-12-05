@@ -4,5 +4,6 @@
 #include "../ast/ast.h"
 
 ASTNode* parseBinaryExpression(int previousPrecedence);
+void parseStatements();
 
 #endif
