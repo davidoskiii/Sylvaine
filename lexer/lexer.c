@@ -72,6 +72,9 @@ static TokenType getKeywordToken(char* word) {
     case 'e':
       if (!strcmp(word, "else")) return TOKEN_ELSE;
       break;
+    case 'f':
+      if (!strcmp(word, "for")) return TOKEN_FOR;
+      break;
     case 'i':
       if (!strcmp(word, "if")) return (TOKEN_IF);
       if (!strcmp(word, "int")) return (TOKEN_INT);
@@ -81,6 +84,9 @@ static TokenType getKeywordToken(char* word) {
       break;
     case 'p':
       if (!strcmp(word, "print")) return TOKEN_PRINT;
+      break;
+    case 'w':
+      if (!strcmp(word, "while")) return TOKEN_WHILE;
       break;
   }
   return 0;

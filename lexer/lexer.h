@@ -33,6 +33,8 @@ typedef enum TokenType {
 
   TOKEN_IF,
   TOKEN_ELSE,
+  TOKEN_WHILE,
+  TOKEN_FOR,
   TOKEN_PRINT,
   TOKEN_LET,
   TOKEN_INT

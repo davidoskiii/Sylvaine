@@ -79,7 +79,6 @@ static ASTNode* parsePrintStatement() {
   tree = parseBinaryExpression(0);
   tree = createUnaryNode(AST_PRINT, tree, 0);
 
-  match(TOKEN_SEMICOLON, ";");
   return tree;
 }
 
@@ -111,8 +110,6 @@ static ASTNode* parseVarDeclaration() {
 
     tree = createNode(AST_ASSIGN, left, NULL, right, 0);
 
-    match(TOKEN_SEMICOLON, ";");
-
     return tree;
   }
 
@@ -138,8 +135,6 @@ static ASTNode* parseAssignmentStatement() {
 
   tree = createNode(AST_ASSIGN, left, NULL, right, 0);
 
-  match(TOKEN_SEMICOLON, ";");
-
   return tree;
 }
 
@@ -160,7 +155,11 @@ ASTNode* parseIfStatement() {
 
   match(TOKEN_IF, "if");
 
+  match(TOKEN_LPAREN, "(");
+
   condAST = parseConditionExpression();
+
+  match(TOKEN_RPAREN, ")");
 
   trueAST = parseCompoundStatement();
 
@@ -172,6 +171,66 @@ ASTNode* parseIfStatement() {
   return createNode(AST_IF, condAST, trueAST, falseAST, 0);
 }
 
+ASTNode* parseWhileStatement() {
+  ASTNode* condAST;
+  ASTNode* bodyAST;
+
+  match(TOKEN_WHILE, "while");
+
+  match(TOKEN_LPAREN, "(");
+
+  condAST = parseConditionExpression();
+
+  match(TOKEN_RPAREN, ")");
+
+  bodyAST = parseCompoundStatement();
+
+  return createNode(AST_WHILE, condAST, NULL, bodyAST, 0);
+}
+
+static ASTNode* parseForStatement() {
+  ASTNode *condAST, *bodyAST;
+  ASTNode *preopAST, *postopAST;
+  ASTNode *tree;
+
+  match(TOKEN_FOR, "for");
+  match(TOKEN_LPAREN, "(");
+
+  preopAST = parseStatement();
+  match(TOKEN_SEMICOLON, ";");
+
+  condAST = parseConditionExpression();
+  match(TOKEN_SEMICOLON, ";");
+
+  postopAST = parseStatement();
+  match(TOKEN_RPAREN, ")");
+
+  bodyAST = parseCompoundStatement();
+
+  tree = createNode(AST_GLUE, bodyAST, NULL, postopAST, 0);
+  tree = createNode(AST_WHILE, condAST, NULL, tree, 0);
+  return createNode(AST_GLUE, preopAST, NULL, tree, 0);
+}
+
+ASTNode* parseStatement() {
+  switch (compiler->current.type) {
+    case TOKEN_PRINT:
+      return parsePrintStatement();
+    case TOKEN_LET:
+      return parseVarDeclaration();
+    case TOKEN_IDENTIFIER:
+      return parseAssignmentStatement();
+    case TOKEN_IF:
+      return parseIfStatement();
+    case TOKEN_WHILE:
+      return parseWhileStatement();
+    case TOKEN_FOR:
+      return parseForStatement();
+    default:
+      fatald("Syntax error, token", compiler->current.type);
+  }
+}
+
 ASTNode* parseCompoundStatement() {
   ASTNode* left = NULL;
   ASTNode* tree;
@@ -179,33 +238,24 @@ ASTNode* parseCompoundStatement() {
   match(TOKEN_LBRACE, "{");
 
   while (true) {
-    switch (compiler->current.type) {
-      case TOKEN_PRINT:
-        tree = parsePrintStatement();
-        break;
-      case TOKEN_LET:
-        tree = parseVarDeclaration();
-        break;
-      case TOKEN_IDENTIFIER:
-        tree = parseAssignmentStatement();
-        break;
-      case TOKEN_IF:
-        tree = parseIfStatement();
-        break;
-      case TOKEN_RBRACE:
-        match(TOKEN_RBRACE, "}");
-        return left;
-      default:
-        fatald("Syntax error, token", compiler->current.type);
-    }
+    tree = parseStatement();
+    if (tree != NULL && (
+      tree->op == AST_PRINT ||
+      tree->op == AST_ASSIGN
+    )) match(TOKEN_SEMICOLON, ";");
 
     // Add the new tree to the left tree
-    if (tree) {
-      if (!left) {
+    if (tree != NULL) {
+      if (left == NULL) {
         left = tree;
       } else {
         left = createNode(AST_GLUE, left, NULL, tree, 0);
       }
+    }
+
+    if (compiler->current.type == TOKEN_RBRACE) {
+      match(TOKEN_RBRACE, "}");
+      return left;
     }
   }
 }
@@ -217,7 +267,7 @@ ASTNode* parseBinaryExpression(int previousPrecedence) {
   leftNode = parsePrimary();
 
   tokenType = compiler->current.type;
-  if (tokenType == TOKEN_SEMICOLON || tokenType == TOKEN_LBRACE)
+  if (tokenType == TOKEN_SEMICOLON || tokenType == TOKEN_RPAREN)
     return leftNode;
 
   while (getOpPrecedence(tokenType) > previousPrecedence) {
@@ -228,7 +278,7 @@ ASTNode* parseBinaryExpression(int previousPrecedence) {
     leftNode = createNode(getArithmeticOperation(tokenType), leftNode, NULL, rightNode, 0);
 
     tokenType = compiler->current.type;
-    if (tokenType == TOKEN_SEMICOLON || tokenType == TOKEN_LBRACE)
+    if (tokenType == TOKEN_SEMICOLON || tokenType == TOKEN_RPAREN)
       return leftNode;
   }
 

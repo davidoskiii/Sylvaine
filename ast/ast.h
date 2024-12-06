@@ -28,7 +28,8 @@ typedef enum AstNodeOp {
   AST_ASSIGN,
   AST_PRINT,
   AST_GLUE,
-  AST_IF
+  AST_IF,
+  AST_WHILE
 } AstNodeOp;
 
 typedef struct ASTNode {

@@ -79,6 +79,23 @@ static int label() {
   return id++;
 }
 
+static int generateWhileAST(ASTNode* node) {
+  int startLabel = label();
+  int endLabel = label();
+
+  generateLabel(startLabel);
+  generateAST(node->left, endLabel, node->op);
+  freeRegisters();
+
+  generateAST(node->right, NOREG, node->op);
+  freeRegisters();
+
+  generateJump(startLabel);
+  generateLabel(endLabel);
+
+  return NOREG;
+}
+
 static int generateIfAST(ASTNode* node) {
   int falseLabel = label();
   int endLabel = node->right ? label() : falseLabel;
@@ -108,6 +125,8 @@ int generateAST(ASTNode* node, int reg, AstNodeOp parentASTOp) {
   switch (node->op) {
     case AST_IF:
       return generateIfAST(node);
+    case AST_WHILE:
+      return generateWhileAST(node);
     case AST_GLUE:
       generateAST(node->left, NOREG, node->op);
       freeRegisters();
@@ -137,7 +156,7 @@ int generateAST(ASTNode* node, int reg, AstNodeOp parentASTOp) {
     case AST_GT:
     case AST_LE:
     case AST_GE:
-      if (parentASTOp == AST_IF) return compareAndJump(node->op, leftRegister, rightRegister, reg);
+      if (parentASTOp == AST_IF || parentASTOp == AST_WHILE) return compareAndJump(node->op, leftRegister, rightRegister, reg);
       else return compareAndSet(node->op, leftRegister, rightRegister);
     case AST_INT_LIT:
       return generateLoadInteger(node->value.intvalue);
