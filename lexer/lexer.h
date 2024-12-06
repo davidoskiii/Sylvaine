@@ -30,14 +30,18 @@ typedef enum TokenType {
   TOKEN_SEMICOLON,
   TOKEN_EQUAL,
   TOKEN_COLON,
+  TOKEN_ARROW,
 
   TOKEN_IF,
   TOKEN_ELSE,
   TOKEN_WHILE,
   TOKEN_FOR,
+  TOKEN_FN,
   TOKEN_PRINT,
   TOKEN_LET,
-  TOKEN_INT
+
+  TOKEN_INT,
+  TOKEN_VOID
 } TokenType;
 
 typedef struct Token {

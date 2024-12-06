@@ -127,6 +127,11 @@ int generateAST(ASTNode* node, int reg, AstNodeOp parentASTOp) {
       return generateIfAST(node);
     case AST_WHILE:
       return generateWhileAST(node);
+    case AST_FUNCTION:
+      generateFunctionPreamble(globalSymbolTable[node->value.id].name);
+      generateAST(node->left, NOREG, node->op);
+      generateFunctionPostamble();
+      return (NOREG);
     case AST_GLUE:
       generateAST(node->left, NOREG, node->op);
       freeRegisters();

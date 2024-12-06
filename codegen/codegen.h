@@ -5,7 +5,8 @@
 
 void freeRegisters();
 void generateAssemblyPreamble();
-void generateAssemblyPostamble();
+void generateFunctionPreamble(char* name);
+void generateFunctionPostamble();
 
 int generateLoadInteger(int value);
 int generateAddition(int reg1, int reg2);

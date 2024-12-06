@@ -48,27 +48,26 @@ void generateAssemblyPreamble() {
     "\tmovl\t%edi, -4(%rbp)\n"
     "\tmovl\t-4(%rbp), %eax\n"
     "\tmovl\t%eax, %esi\n"
-    "\tleaq\t.LC0(%rip), %rdi\n"
-    "\tmovl\t$0, %eax\n"
-    "\tcall\tprintf@PLT\n"
-    "\tnop\n"
-    "\tleave\n"
-    "\tret\n"
-    "\n"
-    "\t.globl\tmain\n"
-    "\t.type\tmain, @function\n"
-    "main:\n"
-    "\tpushq\t%rbp\n"
-    "\tmovq\t%rsp, %rbp\n",
+    "\tleaq	.LC0(%rip), %rdi\n"
+    "\tmovl	$0, %eax\n"
+    "\tcall	printf@PLT\n" "\tnop\n" "\tleave\n" "\tret\n" "\n",
     compiler->fileO);
 }
 
-void generateAssemblyPostamble() {
-  fputs(
-    "\tmovl\t$0, %eax\n"
-    "\tpopq\t%rbp\n"
-    "\tret\n",
-    compiler->fileO);
+void generateFunctionPreamble(char* name) {
+  fprintf(compiler->fileO,
+    "\t.text\n"
+    "\t.globl\t%s\n"
+    "\t.type\t%s, @function\n"
+    "%s:\n"
+    "\tpushq\t%%rbp\n"
+    "\tmovq\t%%rsp, %%rbp\n", name, name, name);
+}
+
+void generateFunctionPostamble() {
+  fputs("\tmovl	$0, %eax\n"
+        "\tpopq	%rbp\n"
+        "\tret\n", compiler->fileO);
 }
 
 int generateLoadInteger(int value) {

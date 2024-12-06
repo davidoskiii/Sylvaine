@@ -6,6 +6,7 @@
 ASTNode* parseBinaryExpression(int previousPrecedence);
 void parseStatements();
 
+ASTNode* parseFunctionDeclaration();
 ASTNode* parseCompoundStatement();
 ASTNode* parseStatement();
 

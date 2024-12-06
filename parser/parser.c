@@ -118,6 +118,28 @@ static ASTNode* parseVarDeclaration() {
   return NULL;
 }
 
+ASTNode* parseFunctionDeclaration() {
+  ASTNode* tree;
+  int nameSlot;
+
+  match(TOKEN_FN, "fn");
+
+  parseIdentifier();
+
+  nameSlot = addGlobalSymbol(compiler->buffer);
+
+  match(TOKEN_LPAREN, "(");
+  match(TOKEN_RPAREN, ")");
+
+  match(TOKEN_ARROW, "->");
+
+  match(TOKEN_VOID, "void");
+
+  tree = parseCompoundStatement();
+
+  return createUnaryNode(AST_FUNCTION, tree, nameSlot);
+}
+
 static ASTNode* parseAssignmentStatement() {
   ASTNode *left, *right, *tree;
   int id;

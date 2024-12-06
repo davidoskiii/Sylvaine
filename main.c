@@ -44,9 +44,11 @@ int main(int argc, char *argv[]) {
 
   advance();
   generateAssemblyPreamble();
-  tree = parseCompoundStatement();
-  generateAST(tree, NOREG, 0);
-  generateAssemblyPostamble();
+  while (true) {
+    tree = parseFunctionDeclaration();
+    generateAST(tree, NOREG, 0);
+    if (compiler->current.type == TOKEN_EOF) break;
+  }
 
   fclose(compiler->fileO);
   exit(0);

@@ -74,6 +74,7 @@ static TokenType getKeywordToken(char* word) {
       break;
     case 'f':
       if (!strcmp(word, "for")) return TOKEN_FOR;
+      if (!strcmp(word, "fn")) return TOKEN_FN;
       break;
     case 'i':
       if (!strcmp(word, "if")) return (TOKEN_IF);
@@ -84,6 +85,9 @@ static TokenType getKeywordToken(char* word) {
       break;
     case 'p':
       if (!strcmp(word, "print")) return TOKEN_PRINT;
+      break;
+    case 'v':
+      if (!strcmp(word, "void")) return TOKEN_VOID;
       break;
     case 'w':
       if (!strcmp(word, "while")) return TOKEN_WHILE;
@@ -105,7 +109,12 @@ bool scan(Token* token) {
       token->type = TOKEN_PLUS;
       break;
     case '-':
-      token->type = TOKEN_MINUS;
+      if ((c = next()) == '>') {
+        token->type = TOKEN_ARROW;
+      } else {
+        putback(c);
+        token->type = TOKEN_MINUS;
+      }
       break;
     case '*':
       token->type = TOKEN_STAR;
