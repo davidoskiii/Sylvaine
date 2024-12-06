@@ -6,6 +6,8 @@
 
 #include "../common.h"
 
+#define NOREG -1
+
 typedef enum AstNodeOp {
   AST_ADD = 1, 
   AST_SUBTRACT,
@@ -23,12 +25,16 @@ typedef enum AstNodeOp {
 
   AST_IDENTIFIER,
   AST_LVIDENT,
-  AST_ASSIGN
+  AST_ASSIGN,
+  AST_PRINT,
+  AST_GLUE,
+  AST_IF
 } AstNodeOp;
 
 typedef struct ASTNode {
   AstNodeOp op;
   struct ASTNode* left;
+  struct ASTNode* mid;
   struct ASTNode* right;
   union {
     int intvalue;
@@ -36,11 +42,13 @@ typedef struct ASTNode {
   } value;
 } ASTNode;
 
-ASTNode* createNode(AstNodeOp op, ASTNode* left, ASTNode* right, int value);
+ASTNode* createNode(AstNodeOp op, ASTNode* left, ASTNode* mid, ASTNode* right, int value);
 ASTNode* createLeafNode(AstNodeOp op, int value);
 ASTNode* createUnaryNode(AstNodeOp op, ASTNode* child, int value);
 AstNodeOp getArithmeticOperation(TokenType token);
 
-int generateAST(ASTNode* node, int reg);
+bool isComparasionOperation(AstNodeOp op);
+
+int generateAST(ASTNode* node, int reg, AstNodeOp parentASTOp);
 
 #endif

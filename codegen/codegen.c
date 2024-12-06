@@ -4,10 +4,11 @@
 #include "codegen.h"
 #include "../common.h"
 #include "../ast/ast.h"
+#include "../misc/misc.h"
 
 static bool registerAvailability[4];
-static char* registerNames[4] = { "%r8", "%r9", "%r10", "%r11" };
-static char* bregisterNames[4] = { "%r8b", "%r9b", "%r10b", "%r11b" };
+static char* registerNames[4] = { "%r8", "%r9", "%reg10", "%reg11" };
+static char* bregisterNames[4] = { "%r8b", "%r9b", "%reg10b", "%reg11b" };
 
 void freeRegisters() {
   for (int i = 0; i < 4; i++) {
@@ -103,36 +104,105 @@ int generateDivision(int reg1, int reg2) {
   return reg1;
 }
 
-static int compareRegisters(int reg1, int reg2, char *condition) {
+static int compareRegisters(int reg1, int reg2, char* condition) {
   fprintf(compiler->fileO, "\tcmpq\t%s, %s\n", registerNames[reg2], registerNames[reg1]);
   fprintf(compiler->fileO, "\t%s\t%s\n", condition, bregisterNames[reg2]);
-  fprintf(compiler->fileO, "\tandq\t$255,%s\n", registerNames[reg2]);
+  fprintf(compiler->fileO, "\tmovzbq\t%s, %s\n", bregisterNames[reg2], registerNames[reg2]);
   freeRegister(reg1);
   return reg2;
+}
+
+static int compareAndJumpRegisters(int reg1, int reg2, char* condition, int label) {
+  fprintf(compiler->fileO, "\tcmpq\t%s, %s\n", registerNames[reg2], registerNames[reg1]);
+  fprintf(compiler->fileO, "\t%s\tL%d\n", condition, label);
+  freeRegisters();
+  return NOREG;
 }
 
 int generateEqualComparison(int reg1, int reg2) {
   return compareRegisters(reg1, reg2, "sete");
 }
 
+int generateEqualComparisonAndJump(int reg1, int reg2, int label) {
+  return compareAndJumpRegisters(reg1, reg2, "jne", label);
+}
+
 int generateNotEqualComparison(int reg1, int reg2) {
   return compareRegisters(reg1, reg2, "setne");
+}
+
+int generateNotEqualComparisonAndJump(int reg1, int reg2, int label) {
+  return compareAndJumpRegisters(reg1, reg2, "je", label);
 }
 
 int generateLessThanComparison(int reg1, int reg2) {
   return compareRegisters(reg1, reg2, "setl");
 }
 
+int generateLessThanComparisonAndJump(int reg1, int reg2, int label) {
+  return compareAndJumpRegisters(reg1, reg2, "jge", label);
+}
+
 int generateGreaterThanComparison(int reg1, int reg2) {
   return compareRegisters(reg1, reg2, "setg");
+}
+
+int generateGreaterThanComparisonAndJump(int reg1, int reg2, int label) {
+  return compareAndJumpRegisters(reg1, reg2, "jle", label);
 }
 
 int generateLessThanOrEqualComparison(int reg1, int reg2) {
   return compareRegisters(reg1, reg2, "setle");
 }
 
+int generateLessThanOrEqualComparisonAndJump(int reg1, int reg2, int label) {
+  return compareAndJumpRegisters(reg1, reg2, "jg", label);
+}
+
 int generateGreaterThanOrEqualComparison(int reg1, int reg2) {
   return compareRegisters(reg1, reg2, "setge");
+}
+
+int generateGreaterThanOrEqualComparisonAndJump(int reg1, int reg2, int label) {
+  return compareAndJumpRegisters(reg1, reg2, "jl", label);
+}
+
+int compareAndSet(int ASTop, int reg1, int reg2) {
+  switch (ASTop) {
+    case AST_EQ:
+      return generateEqualComparison(reg1, reg2);
+    case AST_NE:
+      return generateNotEqualComparison(reg1, reg2);
+    case AST_LT:
+      return generateLessThanComparison(reg1, reg2);
+    case AST_GT:
+      return generateGreaterThanComparison(reg1, reg2);
+    case AST_LE:
+      return generateLessThanOrEqualComparison(reg1, reg2);
+    case AST_GE:
+      return generateGreaterThanOrEqualComparison(reg1, reg2);
+    default:
+      fatal("Bad AST operation in compareAndSet()");
+  }
+}
+
+int compareAndJump(int ASTop, int reg1, int reg2, int label) {
+  switch (ASTop) {
+    case AST_EQ:
+      return generateEqualComparisonAndJump(reg1, reg2, label);
+    case AST_NE:
+      return generateNotEqualComparisonAndJump(reg1, reg2, label);
+    case AST_LT:
+      return generateLessThanComparisonAndJump(reg1, reg2, label);
+    case AST_GT:
+      return generateGreaterThanComparisonAndJump(reg1, reg2, label);
+    case AST_LE:
+      return generateLessThanOrEqualComparisonAndJump(reg1, reg2, label);
+    case AST_GE:
+      return generateGreaterThanOrEqualComparisonAndJump(reg1, reg2, label);
+    default:
+      fatal("Bad AST operation in compareAndJump()");
+  }
 }
 
 void generatePrintInteger(int reg) {
@@ -155,3 +225,12 @@ int storeGlobalSymbol(int reg, char* identifier) {
 void generateGlobalSymbol(char* symbol) {
   fprintf(compiler->fileO, "\t.comm\t%s,8,8\n", symbol);
 }
+
+void generateLabel(int label) {
+  fprintf(compiler->fileO, "L%d:\n", label);
+}
+
+void generateJump(int label) {
+  fprintf(compiler->fileO, "\tjmp\tL%d\n", label);
+}
+

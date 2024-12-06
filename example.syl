@@ -1,3 +1,12 @@
-let x: int = 4;
+{
+  let i: int = 6;
+  let j: int;
 
-print x >= 4;
+  j = 12;
+
+  if i < j {
+    print i;
+  } else {
+    print j;
+  }
+}

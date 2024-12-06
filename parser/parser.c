@@ -71,21 +71,19 @@ static ASTNode* parsePrimary() {
   return node;
 }
 
-void parsePrintStatement() {
+static ASTNode* parsePrintStatement() {
   ASTNode* tree;
-  int reg;
 
   match(TOKEN_PRINT, "print");
 
   tree = parseBinaryExpression(0);
-  reg = generateAST(tree, -1);
-  generatePrintInteger(reg);
-  freeRegisters();
+  tree = createUnaryNode(AST_PRINT, tree, 0);
 
   match(TOKEN_SEMICOLON, ";");
+  return tree;
 }
 
-void parseVarDeclaration() {
+static ASTNode* parseVarDeclaration() {
   int id;
 
   match(TOKEN_LET, "let");
@@ -111,16 +109,19 @@ void parseVarDeclaration() {
 
     left = parseBinaryExpression(0);
 
-    tree = createNode(AST_ASSIGN, left, right, 0);
+    tree = createNode(AST_ASSIGN, left, NULL, right, 0);
 
-    generateAST(tree, -1);
-    freeRegisters();
+    match(TOKEN_SEMICOLON, ";");
+
+    return tree;
   }
 
   match(TOKEN_SEMICOLON, ";");
+
+  return NULL;
 }
 
-void parseAssignmentStatement() {
+static ASTNode* parseAssignmentStatement() {
   ASTNode *left, *right, *tree;
   int id;
 
@@ -135,30 +136,76 @@ void parseAssignmentStatement() {
 
   left = parseBinaryExpression(0);
 
-  tree = createNode(AST_ASSIGN, left, right, 0);
-
-  generateAST(tree, -1);
-  freeRegisters();
+  tree = createNode(AST_ASSIGN, left, NULL, right, 0);
 
   match(TOKEN_SEMICOLON, ";");
+
+  return tree;
 }
 
-void parseStatements() {
+
+ASTNode* parseConditionExpression() {
+  ASTNode* condition = parseBinaryExpression(0);
+  
+  // Ensure the parsed condition is a valid comparison
+  if (!isComparasionOperation(condition->op)) {
+    fatal("Invalid comparison operator in condition");
+  }
+
+  return condition;
+}
+
+ASTNode* parseIfStatement() {
+  ASTNode *condAST, *trueAST, *falseAST = NULL;
+
+  match(TOKEN_IF, "if");
+
+  condAST = parseConditionExpression();
+
+  trueAST = parseCompoundStatement();
+
+  if (compiler->current.type == TOKEN_ELSE) {
+    advance();
+    falseAST = parseCompoundStatement();
+  }
+
+  return createNode(AST_IF, condAST, trueAST, falseAST, 0);
+}
+
+ASTNode* parseCompoundStatement() {
+  ASTNode* left = NULL;
+  ASTNode* tree;
+
+  match(TOKEN_LBRACE, "{");
+
   while (true) {
     switch (compiler->current.type) {
-    case TOKEN_PRINT:
-      parsePrintStatement();
-      break;
-    case TOKEN_LET:
-      parseVarDeclaration();
-      break;
-    case TOKEN_IDENTIFIER:
-      parseAssignmentStatement();
-      break;
-    case TOKEN_EOF:
-      return;
-    default:
-      fatald("Syntax error, token", compiler->current.type);
+      case TOKEN_PRINT:
+        tree = parsePrintStatement();
+        break;
+      case TOKEN_LET:
+        tree = parseVarDeclaration();
+        break;
+      case TOKEN_IDENTIFIER:
+        tree = parseAssignmentStatement();
+        break;
+      case TOKEN_IF:
+        tree = parseIfStatement();
+        break;
+      case TOKEN_RBRACE:
+        match(TOKEN_RBRACE, "}");
+        return left;
+      default:
+        fatald("Syntax error, token", compiler->current.type);
+    }
+
+    // Add the new tree to the left tree
+    if (tree) {
+      if (!left) {
+        left = tree;
+      } else {
+        left = createNode(AST_GLUE, left, NULL, tree, 0);
+      }
     }
   }
 }
@@ -170,7 +217,7 @@ ASTNode* parseBinaryExpression(int previousPrecedence) {
   leftNode = parsePrimary();
 
   tokenType = compiler->current.type;
-  if (tokenType == TOKEN_SEMICOLON)
+  if (tokenType == TOKEN_SEMICOLON || tokenType == TOKEN_LBRACE)
     return leftNode;
 
   while (getOpPrecedence(tokenType) > previousPrecedence) {
@@ -178,10 +225,10 @@ ASTNode* parseBinaryExpression(int previousPrecedence) {
 
     rightNode = parseBinaryExpression(OpPrec[tokenType]);
 
-    leftNode = createNode(getArithmeticOperation(tokenType), leftNode, rightNode, 0);
+    leftNode = createNode(getArithmeticOperation(tokenType), leftNode, NULL, rightNode, 0);
 
     tokenType = compiler->current.type;
-    if (tokenType == TOKEN_SEMICOLON)
+    if (tokenType == TOKEN_SEMICOLON || tokenType == TOKEN_LBRACE)
       return leftNode;
   }
 

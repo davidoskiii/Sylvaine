@@ -12,12 +12,12 @@ int generateAddition(int reg1, int reg2);
 int generateSubtraction(int reg1, int reg2);
 int generateMultiplication(int reg1, int reg2);
 int generateDivision(int reg1, int reg2);
-int generateEqualComparison(int reg1, int reg2);
-int generateNotEqualComparison(int reg1, int reg2);
-int generateLessThanComparison(int reg1, int reg2);
-int generateGreaterThanComparison(int reg1, int reg2);
-int generateLessThanOrEqualComparison(int reg1, int reg2);
-int generateGreaterThanOrEqualComparison(int reg1, int reg2);
+
+int compareAndSet(int ASTop, int reg1, int reg2);
+int compareAndJump(int ASTop, int reg1, int reg2, int label);
+
+void generateLabel(int label);
+void generateJump(int label);
 
 void generatePrintInteger(int reg);
 

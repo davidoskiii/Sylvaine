@@ -69,14 +69,18 @@ static int scanidentifier(int currentChar, char *buffer, int limit) {
 
 static TokenType getKeywordToken(char* word) {
   switch (*word) {
-    case 'p':
-      if (!strcmp(word, "print")) return TOKEN_PRINT;
+    case 'e':
+      if (!strcmp(word, "else")) return TOKEN_ELSE;
       break;
     case 'i':
+      if (!strcmp(word, "if")) return (TOKEN_IF);
       if (!strcmp(word, "int")) return (TOKEN_INT);
       break;
     case 'l':
       if (!strcmp(word, "let")) return (TOKEN_LET);
+      break;
+    case 'p':
+      if (!strcmp(word, "print")) return TOKEN_PRINT;
       break;
   }
   return 0;
@@ -133,6 +137,18 @@ bool scan(Token* token) {
         putback(c);
         token->type = TOKEN_GT;
       }
+      break;
+    case '{':
+      token->type = TOKEN_LBRACE;
+      break;
+    case '}':
+      token->type = TOKEN_RBRACE;
+      break;
+    case '(':
+      token->type = TOKEN_LPAREN;
+      break;
+    case ')':
+      token->type = TOKEN_RPAREN;
       break;
     case ':':
       token->type = TOKEN_COLON;

@@ -24,6 +24,8 @@ static void usage(char* prog) {
 }
 
 int main(int argc, char *argv[]) {
+  ASTNode* tree;
+
   if (argc != 2)
     usage(argv[0]);
 
@@ -42,7 +44,8 @@ int main(int argc, char *argv[]) {
 
   advance();
   generateAssemblyPreamble();
-  parseStatements();
+  tree = parseCompoundStatement();
+  generateAST(tree, NOREG, 0);
   generateAssemblyPostamble();
 
   fclose(compiler->fileO);

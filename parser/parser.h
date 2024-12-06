@@ -6,6 +6,8 @@
 ASTNode* parseBinaryExpression(int previousPrecedence);
 void parseStatements();
 
+ASTNode* parseCompoundStatement();
+
 void advance();
 void match(int tokenType, char* expected);
 bool check(int tokenType);
