@@ -6,13 +6,16 @@
 #include <stdbool.h>
 
 #include "../ast/ast.h"
+#include "../types/types.h"
 
 typedef struct SymbolTable {
   char* name;
+  PrimitiveTypes type;
+  StructuralTypes stype;
 } SymbolTable;
 
 int findGlobalSymbol(char* symbol);
-int addGlobalSymbol(char* name);
+int addGlobalSymbol(char* name, PrimitiveTypes type, StructuralTypes stype);
 
 extern SymbolTable globalSymbolTable[NSYMBOLS];
 

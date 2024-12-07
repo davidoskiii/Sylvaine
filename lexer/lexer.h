@@ -41,6 +41,7 @@ typedef enum TokenType {
   TOKEN_LET,
 
   TOKEN_INT,
+  TOKEN_CHAR,
   TOKEN_VOID
 } TokenType;
 

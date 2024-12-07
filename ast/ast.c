@@ -5,7 +5,7 @@
 #include "../symbol/symbol.h"
 #include "../codegen/codegen.h"
 
-ASTNode* createNode(AstNodeOp op, ASTNode* left, ASTNode* mid, ASTNode* right, int value) {
+ASTNode* createNode(AstNodeOp op, PrimitiveTypes type, ASTNode* left, ASTNode* mid, ASTNode* right, int value) {
   ASTNode* node = ALLOCATE(ASTNode);
 
   if (node == NULL) {
@@ -14,6 +14,7 @@ ASTNode* createNode(AstNodeOp op, ASTNode* left, ASTNode* mid, ASTNode* right, i
   }
 
   node->op = op;
+  node->type = type;
   node->left = left;
   node->mid = mid;
   node->right = right;
@@ -23,13 +24,13 @@ ASTNode* createNode(AstNodeOp op, ASTNode* left, ASTNode* mid, ASTNode* right, i
 
 
 // Create an AST leaf node
-ASTNode* createLeafNode(AstNodeOp op, int value) {
-  return createNode(op, NULL, NULL, NULL, value);
+ASTNode* createLeafNode(AstNodeOp op, PrimitiveTypes type, int value) {
+  return createNode(op, type, NULL, NULL, NULL, value);
 }
 
 // Create a unary AST node with one child
-ASTNode* createUnaryNode(AstNodeOp op, ASTNode* child, int value) {
-  return createNode(op, child, NULL, NULL, value);
+ASTNode* createUnaryNode(AstNodeOp op, PrimitiveTypes type, ASTNode* child, int value) {
+  return createNode(op, type, child, NULL, NULL, value);
 }
 
 AstNodeOp getArithmeticOperation(TokenType token) {
@@ -166,15 +167,17 @@ int generateAST(ASTNode* node, int reg, AstNodeOp parentASTOp) {
     case AST_INT_LIT:
       return generateLoadInteger(node->value.intvalue);
     case AST_IDENTIFIER:
-      return loadGlobalSymbol(globalSymbolTable[node->value.id].name);
+      return loadGlobalSymbol(node->value.id);
     case AST_LVIDENT:
-      return storeGlobalSymbol(reg, globalSymbolTable[node->value.id].name);
+      return storeGlobalSymbol(reg, node->value.id);
     case AST_ASSIGN:
       return rightRegister;
     case AST_PRINT:
       generatePrintInteger(leftRegister);
       freeRegisters();
       return NOREG;
+    case AST_WIDEN:
+      return (generateWiden(leftRegister, node->left->type, node->type));
     default:
       fprintf(stderr, "Unknown AST operation %d\n", node->op);
       exit(1);

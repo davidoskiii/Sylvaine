@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "../common.h"
+#include "../types/types.h"
 
 #define NOREG -1
 
@@ -30,11 +30,13 @@ typedef enum AstNodeOp {
   AST_GLUE,
   AST_IF,
   AST_WHILE,
-  AST_FUNCTION
+  AST_FUNCTION,
+  AST_WIDEN
 } AstNodeOp;
 
 typedef struct ASTNode {
   AstNodeOp op;
+  PrimitiveTypes type;
   struct ASTNode* left;
   struct ASTNode* mid;
   struct ASTNode* right;
@@ -44,9 +46,9 @@ typedef struct ASTNode {
   } value;
 } ASTNode;
 
-ASTNode* createNode(AstNodeOp op, ASTNode* left, ASTNode* mid, ASTNode* right, int value);
-ASTNode* createLeafNode(AstNodeOp op, int value);
-ASTNode* createUnaryNode(AstNodeOp op, ASTNode* child, int value);
+ASTNode* createNode(AstNodeOp op, PrimitiveTypes type, ASTNode* left, ASTNode* mid, ASTNode* right, int value);
+ASTNode* createLeafNode(AstNodeOp op, PrimitiveTypes type, int value);
+ASTNode* createUnaryNode(AstNodeOp op, PrimitiveTypes type, ASTNode* child, int value);
 AstNodeOp getArithmeticOperation(TokenType token);
 
 bool isComparasionOperation(AstNodeOp op);

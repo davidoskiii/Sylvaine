@@ -1,3 +1,4 @@
+#include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -41,6 +42,13 @@ void parseIdentifier() {
   match(TOKEN_IDENTIFIER, "identifier");
 }
 
+PrimitiveTypes parseType(TokenType token) {
+  if (token == TOKEN_CHAR) return PRIMITIVE_CHAR;
+  if (token == TOKEN_INT)  return PRIMITIVE_INT;
+  if (token == TOKEN_VOID) return PRIMITIVE_VOID;
+  fatald("Illegal type, token", token);
+}
+
 static int getOpPrecedence(TokenType tokenType) {
   int precedence = OpPrec[tokenType];
   if (precedence == 0) {
@@ -56,13 +64,14 @@ static ASTNode* parsePrimary() {
 
   switch (compiler->current.type) {
     case TOKEN_INT_LIT:
-      node = createLeafNode(AST_INT_LIT, compiler->current.intvalue);
+      if ((compiler->current.intvalue) >= 0 && (compiler->current.intvalue < 256)) node = createLeafNode(AST_INT_LIT, PRIMITIVE_CHAR, compiler->current.intvalue);
+      else node = createLeafNode(AST_INT_LIT, PRIMITIVE_INT, compiler->current.intvalue);
       break;
     case TOKEN_IDENTIFIER:
       id = findGlobalSymbol(compiler->buffer);
       if (id == -1) fatals("Unknown variable", compiler->buffer);
 
-      node = createLeafNode(AST_IDENTIFIER, id);
+      node = createLeafNode(AST_IDENTIFIER, globalSymbolTable[id].type, id);
       break;
     default: fatald("Syntax error, token", compiler->current.type);
   }
@@ -73,47 +82,78 @@ static ASTNode* parsePrimary() {
 
 static ASTNode* parsePrintStatement() {
   ASTNode* tree;
-
+  PrimitiveTypes leftType = PRIMITIVE_INT;
+  PrimitiveTypes rightType;
+  
   match(TOKEN_PRINT, "print");
 
   tree = parseBinaryExpression(0);
-  tree = createUnaryNode(AST_PRINT, tree, 0);
+
+  rightType = tree->type;
+  if (!typeCompatible(&leftType, &rightType, 0)) {
+    fatal("Incompatible types in print statement");
+  }
+
+  if (rightType) {
+    tree = createUnaryNode(rightType, PRIMITIVE_INT, tree, 0);
+  }
+
+  tree = createUnaryNode(AST_PRINT, PRIMITIVE_NONE, tree, 0);
 
   return tree;
 }
 
 static ASTNode* parseVarDeclaration() {
+  ASTNode *left, *right, *tree;
   int id;
+  PrimitiveTypes leftType, rightType;
 
   match(TOKEN_LET, "let");
   
   parseIdentifier();
 
-  addGlobalSymbol(compiler->buffer);
-  generateGlobalSymbol(compiler->buffer);
-
-  if ((id = findGlobalSymbol(compiler->buffer)) == -1) {
-    fatals("Undeclared variable", compiler->buffer);
+  char* buffer = malloc(strlen(compiler->buffer) + 1);
+  
+  if (buffer == NULL) {
+    fatal("Failed to allocate memory in parseVarDeclaration()");
   }
+  
+  strcpy(buffer, compiler->buffer);
 
   match(TOKEN_COLON, ":");
-  match(TOKEN_INT, "int");
+  leftType = parseType(compiler->current.type);
+  advance();
+
+  id = addGlobalSymbol(buffer, leftType, STRUCTURAL_VARIABLE);
+  generateGlobalSymbol(id);
+
+  if ((id = findGlobalSymbol(buffer)) == -1) {
+    fatals("Undeclared variable", buffer);
+  }
+  right = createLeafNode(AST_LVIDENT, globalSymbolTable[id].type, id);
 
   if (check(TOKEN_EQUAL)) {
-    ASTNode *left, *right, *tree;
-
-    right = createLeafNode(AST_LVIDENT, id);
-
     match(TOKEN_EQUAL, "=");
 
     left = parseBinaryExpression(0);
 
-    tree = createNode(AST_ASSIGN, left, NULL, right, 0);
+    leftType = left->type;
+    rightType = right->type;
+    if (!typeCompatible(&leftType, &rightType, 1))
+      fatal("Incompatible types");
+
+    if (leftType) left = createUnaryNode(leftType, right->type, left, 0);
+
+    tree = createNode(AST_ASSIGN, PRIMITIVE_INT, left, NULL, right, 0);
+
+    free(buffer);
 
     return tree;
   }
 
   match(TOKEN_SEMICOLON, ";");
+
+  free(buffer);
 
   return NULL;
 }
@@ -126,7 +166,7 @@ ASTNode* parseFunctionDeclaration() {
 
   parseIdentifier();
 
-  nameSlot = addGlobalSymbol(compiler->buffer);
+  nameSlot = addGlobalSymbol(compiler->buffer, PRIMITIVE_VOID, STRUCTURAL_FUNCTION);
 
   match(TOKEN_LPAREN, "(");
   match(TOKEN_RPAREN, ")");
@@ -137,11 +177,12 @@ ASTNode* parseFunctionDeclaration() {
 
   tree = parseCompoundStatement();
 
-  return createUnaryNode(AST_FUNCTION, tree, nameSlot);
+  return createUnaryNode(AST_FUNCTION, PRIMITIVE_VOID, tree, nameSlot);
 }
 
 static ASTNode* parseAssignmentStatement() {
   ASTNode *left, *right, *tree;
+  PrimitiveTypes leftType, rightType;
   int id;
 
   parseIdentifier();
@@ -149,13 +190,21 @@ static ASTNode* parseAssignmentStatement() {
   if ((id = findGlobalSymbol(compiler->buffer)) == -1) {
     fatals("Undeclared variable", compiler->buffer);
   }
-  right = createLeafNode(AST_LVIDENT, id);
+  right = createLeafNode(AST_LVIDENT, globalSymbolTable[id].type, id);
 
   match(TOKEN_EQUAL, "=");
 
   left = parseBinaryExpression(0);
 
-  tree = createNode(AST_ASSIGN, left, NULL, right, 0);
+  leftType = left->type;
+  rightType = right->type;
+  if (!typeCompatible(&leftType, &rightType, 1))
+    fatal("Incompatible types");
+
+  if (leftType)
+    left = createUnaryNode(leftType, right->type, left, 0);
+
+  tree = createNode(AST_ASSIGN, PRIMITIVE_INT, left, NULL, right, 0);
 
   return tree;
 }
@@ -190,7 +239,7 @@ ASTNode* parseIfStatement() {
     falseAST = parseCompoundStatement();
   }
 
-  return createNode(AST_IF, condAST, trueAST, falseAST, 0);
+  return createNode(AST_IF, PRIMITIVE_NONE, condAST, trueAST, falseAST, 0);
 }
 
 ASTNode* parseWhileStatement() {
@@ -207,7 +256,7 @@ ASTNode* parseWhileStatement() {
 
   bodyAST = parseCompoundStatement();
 
-  return createNode(AST_WHILE, condAST, NULL, bodyAST, 0);
+  return createNode(AST_WHILE, PRIMITIVE_NONE, condAST, NULL, bodyAST, 0);
 }
 
 static ASTNode* parseForStatement() {
@@ -229,9 +278,9 @@ static ASTNode* parseForStatement() {
 
   bodyAST = parseCompoundStatement();
 
-  tree = createNode(AST_GLUE, bodyAST, NULL, postopAST, 0);
-  tree = createNode(AST_WHILE, condAST, NULL, tree, 0);
-  return createNode(AST_GLUE, preopAST, NULL, tree, 0);
+  tree = createNode(AST_GLUE, PRIMITIVE_NONE, bodyAST, NULL, postopAST, 0);
+  tree = createNode(AST_WHILE, PRIMITIVE_NONE, condAST, NULL, tree, 0);
+  return createNode(AST_GLUE, PRIMITIVE_NONE, preopAST, NULL, tree, 0);
 }
 
 ASTNode* parseStatement() {
@@ -271,7 +320,7 @@ ASTNode* parseCompoundStatement() {
       if (left == NULL) {
         left = tree;
       } else {
-        left = createNode(AST_GLUE, left, NULL, tree, 0);
+        left = createNode(AST_GLUE, PRIMITIVE_NONE, left, NULL, tree, 0);
       }
     }
 
@@ -284,6 +333,7 @@ ASTNode* parseCompoundStatement() {
 
 ASTNode* parseBinaryExpression(int previousPrecedence) {
   ASTNode *leftNode, *rightNode;
+  PrimitiveTypes leftType, rightType;
   TokenType tokenType;
 
   leftNode = parsePrimary();
@@ -297,14 +347,21 @@ ASTNode* parseBinaryExpression(int previousPrecedence) {
 
     rightNode = parseBinaryExpression(OpPrec[tokenType]);
 
-    leftNode = createNode(getArithmeticOperation(tokenType), leftNode, NULL, rightNode, 0);
+    leftType = leftNode->type;
+    rightType = rightNode->type;
+    if (!typeCompatible(&leftType, &rightType, 0))
+      fatal("Incompatible types");
+
+    if (leftType) leftNode = createUnaryNode(leftType, rightNode->type, leftNode, 0);
+    if (rightType) rightNode = createUnaryNode(rightType, leftNode->type, rightNode, 0);
+
+    leftNode = createNode(getArithmeticOperation(tokenType), leftNode->type, leftNode, NULL, rightNode, 0);
 
     tokenType = compiler->current.type;
     if (tokenType == TOKEN_SEMICOLON || tokenType == TOKEN_RPAREN)
       return leftNode;
   }
 
-  // Return the tree when the precedence is the same or lower
   return leftNode;
 }
 

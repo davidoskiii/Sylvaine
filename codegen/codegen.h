@@ -20,10 +20,12 @@ int compareAndJump(int ASTop, int reg1, int reg2, int label);
 void generateLabel(int label);
 void generateJump(int label);
 
+int generateWiden(int reg, PrimitiveTypes oldType, PrimitiveTypes newType);
+
 void generatePrintInteger(int reg);
 
-int loadGlobalSymbol(char* identifier);
-int storeGlobalSymbol(int reg, char* identifier);
-void generateGlobalSymbol(char* symbol);
+int loadGlobalSymbol(int id);
+int storeGlobalSymbol(int reg, int id);
+void generateGlobalSymbol(int id);
 
 #endif

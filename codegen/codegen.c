@@ -4,6 +4,7 @@
 #include "codegen.h"
 #include "../common.h"
 #include "../ast/ast.h"
+#include "../symbol/symbol.h"
 #include "../misc/misc.h"
 
 static bool registerAvailability[4];
@@ -210,19 +211,24 @@ void generatePrintInteger(int reg) {
   freeRegister(reg);
 }
 
-int loadGlobalSymbol(char* identifier) {
+int loadGlobalSymbol(int id) {
   int reg = allocateRegister();
-  fprintf(compiler->fileO, "\tmovq\t%s(\%%rip), %s\n", identifier, registerNames[reg]);
+  if (globalSymbolTable[id].type == PRIMITIVE_INT) fprintf(compiler->fileO, "\tmovq\t%s(\%%rip), %s\n", globalSymbolTable[id].name, registerNames[reg]);
+  else fprintf(compiler->fileO, "\tmovzbq\t%s(\%%rip), %s\n", globalSymbolTable[id].name, registerNames[reg]);
   return reg;
 }
 
-int storeGlobalSymbol(int reg, char* identifier) {
-  fprintf(compiler->fileO, "\tmovq\t%s, %s(\%%rip)\n", registerNames[reg], identifier);
+int storeGlobalSymbol(int reg, int id) {
+  if (globalSymbolTable[id].type == PRIMITIVE_INT)
+    fprintf(compiler->fileO, "\tmovq\t%s, %s(\%%rip)\n", registerNames[reg], globalSymbolTable[id].name);
+  else
+    fprintf(compiler->fileO, "\tmovb\t%s, %s(\%%rip)\n", bregisterNames[reg], globalSymbolTable[id].name);
   return reg;
 }
 
-void generateGlobalSymbol(char* symbol) {
-  fprintf(compiler->fileO, "\t.comm\t%s,8,8\n", symbol);
+void generateGlobalSymbol(int id) {
+  if (globalSymbolTable[id].type == PRIMITIVE_INT) fprintf(compiler->fileO, "\t.comm\t%s,8,8\n", globalSymbolTable[id].name);
+  else fprintf(compiler->fileO, "\t.comm\t%s,1,1\n", globalSymbolTable[id].name);
 }
 
 void generateLabel(int label) {
@@ -231,5 +237,9 @@ void generateLabel(int label) {
 
 void generateJump(int label) {
   fprintf(compiler->fileO, "\tjmp\tL%d\n", label);
+}
+
+int generateWiden(int reg, PrimitiveTypes oldType, PrimitiveTypes newType) {
+  return reg;
 }
 

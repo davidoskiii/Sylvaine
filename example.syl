@@ -1,6 +1,6 @@
 fn main() -> void {
   let i: int = 6;
-  let j: int;
+  let j: char;
 
   j = 12;
 

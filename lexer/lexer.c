@@ -69,6 +69,9 @@ static int scanidentifier(int currentChar, char *buffer, int limit) {
 
 static TokenType getKeywordToken(char* word) {
   switch (*word) {
+    case 'c':
+      if (!strcmp(word, "char")) return TOKEN_CHAR;
+      break;
     case 'e':
       if (!strcmp(word, "else")) return TOKEN_ELSE;
       break;
