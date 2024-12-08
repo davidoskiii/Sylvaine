@@ -10,7 +10,8 @@ typedef enum PrimitiveTypes {
   PRIMITIVE_NONE,
   PRIMITIVE_VOID,
   PRIMITIVE_CHAR,
-  PRIMITIVE_INT
+  PRIMITIVE_INT,
+  PRIMITIVE_LONG
 } PrimitiveTypes;
 
 typedef enum StructuralTypes {

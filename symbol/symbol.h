@@ -12,10 +12,11 @@ typedef struct SymbolTable {
   char* name;
   PrimitiveTypes type;
   StructuralTypes stype;
+  int endLabel;
 } SymbolTable;
 
 int findGlobalSymbol(char* symbol);
-int addGlobalSymbol(char* name, PrimitiveTypes type, StructuralTypes stype);
+int addGlobalSymbol(char* name, PrimitiveTypes type, StructuralTypes stype, int endLabel);
 
 extern SymbolTable globalSymbolTable[NSYMBOLS];
 

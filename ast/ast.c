@@ -75,7 +75,7 @@ bool isComparasionOperation(AstNodeOp op) {
   }
 }
 
-static int label() {
+int label() {
   static int id = 1;
   return id++;
 }
@@ -129,10 +129,10 @@ int generateAST(ASTNode* node, int reg, AstNodeOp parentASTOp) {
     case AST_WHILE:
       return generateWhileAST(node);
     case AST_FUNCTION:
-      generateFunctionPreamble(globalSymbolTable[node->value.id].name);
+      generateFunctionPreamble(node->value.id);
       generateAST(node->left, NOREG, node->op);
-      generateFunctionPostamble();
-      return (NOREG);
+      generateFunctionPostamble(node->value.id);
+      return NOREG;
     case AST_GLUE:
       generateAST(node->left, NOREG, node->op);
       freeRegisters();
@@ -177,7 +177,12 @@ int generateAST(ASTNode* node, int reg, AstNodeOp parentASTOp) {
       freeRegisters();
       return NOREG;
     case AST_WIDEN:
-      return (generateWiden(leftRegister, node->left->type, node->type));
+      return generateWiden(leftRegister, node->left->type, node->type);
+    case AST_RETURN:
+      generateReturn(leftRegister, compiler->functionId);
+      return NOREG;
+    case AST_CALL:
+      return generateCall(leftRegister, node->value.id);
     default:
       fprintf(stderr, "Unknown AST operation %d\n", node->op);
       exit(1);

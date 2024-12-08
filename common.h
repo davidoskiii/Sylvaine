@@ -17,6 +17,7 @@ typedef struct Compiler {
   char buffer[TEXTLEN + 1];
 
   Token current;
+  int functionId;
 
   FILE* fileI;
   FILE* fileO;

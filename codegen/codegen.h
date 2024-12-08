@@ -4,9 +4,11 @@
 #include "../ast/ast.h"
 
 void freeRegisters();
+int getPrimitiveSize(int type);
+
 void generateAssemblyPreamble();
-void generateFunctionPreamble(char* name);
-void generateFunctionPostamble();
+void generateFunctionPreamble(int id);
+void generateFunctionPostamble(int id);
 
 int generateLoadInteger(int value);
 int generateAddition(int reg1, int reg2);
@@ -21,6 +23,8 @@ void generateLabel(int label);
 void generateJump(int label);
 
 int generateWiden(int reg, PrimitiveTypes oldType, PrimitiveTypes newType);
+void generateReturn(int reg, int id);
+int generateCall(int reg, int id);
 
 void generatePrintInteger(int reg);
 

@@ -31,7 +31,9 @@ typedef enum AstNodeOp {
   AST_IF,
   AST_WHILE,
   AST_FUNCTION,
-  AST_WIDEN
+  AST_WIDEN,
+  AST_RETURN,
+  AST_CALL,
 } AstNodeOp;
 
 typedef struct ASTNode {
@@ -50,6 +52,8 @@ ASTNode* createNode(AstNodeOp op, PrimitiveTypes type, ASTNode* left, ASTNode* m
 ASTNode* createLeafNode(AstNodeOp op, PrimitiveTypes type, int value);
 ASTNode* createUnaryNode(AstNodeOp op, PrimitiveTypes type, ASTNode* child, int value);
 AstNodeOp getArithmeticOperation(TokenType token);
+
+int label();
 
 bool isComparasionOperation(AstNodeOp op);
 

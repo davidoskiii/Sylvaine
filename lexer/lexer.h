@@ -36,12 +36,14 @@ typedef enum TokenType {
   TOKEN_ELSE,
   TOKEN_WHILE,
   TOKEN_FOR,
-  TOKEN_FN,
+  TOKEN_RETURN,
   TOKEN_PRINT,
+  TOKEN_FN,
   TOKEN_LET,
 
   TOKEN_INT,
   TOKEN_CHAR,
+  TOKEN_LONG,
   TOKEN_VOID
 } TokenType;
 
@@ -50,6 +52,7 @@ typedef struct Token {
   int intvalue;
 } Token;
 
+void rejectToken(Token* token);
 bool scan(Token* token);
 
 #endif

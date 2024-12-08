@@ -21,6 +21,10 @@ void advance() {
   scan(&compiler->current);
 }
 
+void retreat() {
+  rejectToken(&compiler->current);
+}
+
 void match(int tokenType, char* expected) {
   if (compiler->current.type == tokenType) {
     advance();
@@ -45,6 +49,7 @@ void parseIdentifier() {
 PrimitiveTypes parseType(TokenType token) {
   if (token == TOKEN_CHAR) return PRIMITIVE_CHAR;
   if (token == TOKEN_INT)  return PRIMITIVE_INT;
+  if (token == TOKEN_LONG)  return PRIMITIVE_LONG;
   if (token == TOKEN_VOID) return PRIMITIVE_VOID;
   fatald("Illegal type, token", token);
 }
@@ -68,6 +73,14 @@ static ASTNode* parsePrimary() {
       else node = createLeafNode(AST_INT_LIT, PRIMITIVE_INT, compiler->current.intvalue);
       break;
     case TOKEN_IDENTIFIER:
+      advance();
+      
+      if (compiler->current.type == TOKEN_LPAREN) {
+        return parseFunctionCall();
+      }
+
+      retreat();
+      
       id = findGlobalSymbol(compiler->buffer);
       if (id == -1) fatals("Unknown variable", compiler->buffer);
 
@@ -124,7 +137,7 @@ static ASTNode* parseVarDeclaration() {
   leftType = parseType(compiler->current.type);
   advance();
 
-  id = addGlobalSymbol(buffer, leftType, STRUCTURAL_VARIABLE);
+  id = addGlobalSymbol(buffer, leftType, STRUCTURAL_VARIABLE, 0);
   generateGlobalSymbol(id);
 
   if ((id = findGlobalSymbol(buffer)) == -1) {
@@ -159,25 +172,62 @@ static ASTNode* parseVarDeclaration() {
 }
 
 ASTNode* parseFunctionDeclaration() {
-  ASTNode* tree;
-  int nameSlot;
+  ASTNode *tree, *finalStatement;
+  int nameSlot, endLabel;
+  PrimitiveTypes type;
 
   match(TOKEN_FN, "fn");
 
   parseIdentifier();
 
-  nameSlot = addGlobalSymbol(compiler->buffer, PRIMITIVE_VOID, STRUCTURAL_FUNCTION);
+  char* buffer = malloc(strlen(compiler->buffer) + 1);
+  
+  if (buffer == NULL) {
+    fatal("Failed to allocate memory in parseVarDeclaration()");
+  }
+  
+  strcpy(buffer, compiler->buffer);
 
   match(TOKEN_LPAREN, "(");
   match(TOKEN_RPAREN, ")");
 
   match(TOKEN_ARROW, "->");
 
-  match(TOKEN_VOID, "void");
+  type = parseType(compiler->current.type);
+  advance();
+
+  endLabel = label();
+  nameSlot = addGlobalSymbol(buffer, type, STRUCTURAL_FUNCTION, endLabel);
+  compiler->functionId = nameSlot;
 
   tree = parseCompoundStatement();
 
-  return createUnaryNode(AST_FUNCTION, PRIMITIVE_VOID, tree, nameSlot);
+  if (type != PRIMITIVE_VOID) {
+    finalStatement = (tree->op == AST_GLUE) ? tree->right : tree;
+    if (finalStatement == NULL || finalStatement->op != AST_RETURN)
+      fatal("No return for function with non-void type");
+  }
+
+  free(buffer);
+
+  return createUnaryNode(AST_FUNCTION, type, tree, nameSlot);
+}
+
+ASTNode* parseFunctionCall() {
+  ASTNode* tree;
+  int id;
+
+  if ((id = findGlobalSymbol(compiler->buffer)) == -1) {
+    fatals("Undeclared function", compiler->buffer);
+  }
+  match(TOKEN_LPAREN, "(");
+
+  tree = parseBinaryExpression(0);
+
+  tree = createUnaryNode(AST_CALL, globalSymbolTable[id].type, tree, id);
+
+  match(TOKEN_RPAREN, ")");
+  return tree;
 }
 
 static ASTNode* parseAssignmentStatement() {
@@ -186,6 +236,9 @@ static ASTNode* parseAssignmentStatement() {
   int id;
 
   parseIdentifier();
+
+  if (compiler->current.type == TOKEN_LPAREN)
+    return parseFunctionCall();
 
   if ((id = findGlobalSymbol(compiler->buffer)) == -1) {
     fatals("Undeclared variable", compiler->buffer);
@@ -283,6 +336,30 @@ static ASTNode* parseForStatement() {
   return createNode(AST_GLUE, PRIMITIVE_NONE, preopAST, NULL, tree, 0);
 }
 
+
+static ASTNode* parseReturnStatement() {
+  ASTNode* tree;
+  PrimitiveTypes returnType, funcType;
+
+  if (globalSymbolTable[compiler->functionId].type == PRIMITIVE_VOID)
+    fatal("Can't return from a void function");
+
+  match(TOKEN_RETURN, "return");
+
+  tree = parseBinaryExpression(0);
+
+  returnType = tree->type;
+  funcType = globalSymbolTable[compiler->functionId].type;
+  if (!typeCompatible(&returnType, &funcType, true))
+    fatal("Incompatible types");
+
+  if (returnType) tree = createUnaryNode(returnType, funcType, tree, 0);
+
+  tree = createUnaryNode(AST_RETURN, PRIMITIVE_NONE, tree, 0);
+
+  return tree;
+}
+
 ASTNode* parseStatement() {
   switch (compiler->current.type) {
     case TOKEN_PRINT:
@@ -297,6 +374,8 @@ ASTNode* parseStatement() {
       return parseWhileStatement();
     case TOKEN_FOR:
       return parseForStatement();
+    case TOKEN_RETURN:
+      return parseReturnStatement();
     default:
       fatald("Syntax error, token", compiler->current.type);
   }
@@ -312,7 +391,9 @@ ASTNode* parseCompoundStatement() {
     tree = parseStatement();
     if (tree != NULL && (
       tree->op == AST_PRINT ||
-      tree->op == AST_ASSIGN
+      tree->op == AST_ASSIGN ||
+      tree->op == AST_RETURN ||
+      tree->op == AST_CALL
     )) match(TOKEN_SEMICOLON, ";");
 
     // Add the new tree to the left tree

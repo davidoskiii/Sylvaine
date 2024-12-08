@@ -5,6 +5,8 @@
 #include "../common.h"
 #include "../misc/misc.h"
 
+static Token* RejectToken = NULL;
+
 static int charPos(char* str, int chr) {
   char* pchar = strchr(str, chr);
   return (pchar ? pchar - str : -1);
@@ -80,14 +82,18 @@ static TokenType getKeywordToken(char* word) {
       if (!strcmp(word, "fn")) return TOKEN_FN;
       break;
     case 'i':
-      if (!strcmp(word, "if")) return (TOKEN_IF);
-      if (!strcmp(word, "int")) return (TOKEN_INT);
+      if (!strcmp(word, "if")) return TOKEN_IF;
+      if (!strcmp(word, "int")) return TOKEN_INT;
       break;
     case 'l':
-      if (!strcmp(word, "let")) return (TOKEN_LET);
+      if (!strcmp(word, "let")) return TOKEN_LET;
+      if (!strcmp(word, "long")) return TOKEN_LONG;
       break;
     case 'p':
       if (!strcmp(word, "print")) return TOKEN_PRINT;
+      break;
+    case 'r':
+      if (!strcmp(word, "return")) return TOKEN_RETURN;
       break;
     case 'v':
       if (!strcmp(word, "void")) return TOKEN_VOID;
@@ -99,8 +105,19 @@ static TokenType getKeywordToken(char* word) {
   return 0;
 }
 
+void rejectToken(Token* token) {
+  if (RejectToken != NULL)
+    fatal("Can't reject token twice");
+  RejectToken = token;
+}
 
 bool scan(Token* token) {
+  if (RejectToken != NULL) {
+    token = RejectToken;
+    RejectToken = NULL;
+    return true;
+  }
+
   int c = skip();
   TokenType tokenType;
 

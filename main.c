@@ -6,6 +6,7 @@
 #include "lexer/lexer.h"
 #include "ast/ast.h"
 #include "parser/parser.h"
+#include "symbol/symbol.h"
 
 Compiler* compiler;
 
@@ -41,6 +42,7 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
 
+  addGlobalSymbol("printint", PRIMITIVE_CHAR, STRUCTURAL_FUNCTION, false);
 
   advance();
   generateAssemblyPreamble();

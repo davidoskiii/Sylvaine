@@ -8,8 +8,9 @@
 #include "../misc/misc.h"
 
 static bool registerAvailability[4];
-static char* registerNames[4] = { "%r8", "%r9", "%reg10", "%reg11" };
-static char* bregisterNames[4] = { "%r8b", "%r9b", "%reg10b", "%reg11b" };
+static char* registerNames[4] = { "%r8", "%r9", "%r10", "%r11" };
+static char* bregisterNames[4] = { "%r8b", "%r9b", "%r10b", "%r11b" };
+static char* dregisterNames[4] = { "%r8d", "%r9d", "%r10d", "%r11d" };
 
 void freeRegisters() {
   for (int i = 0; i < 4; i++) {
@@ -36,26 +37,21 @@ static void freeRegister(int reg) {
   registerAvailability[reg] = true;
 }
 
-void generateAssemblyPreamble() {
-  freeRegisters();
-  fputs(
-    "\t.text\n"
-    ".LC0:\n"
-    "\t.string\t\"%d\\n\"\n"
-    "printint:\n"
-    "\tpushq\t%rbp\n"
-    "\tmovq\t%rsp, %rbp\n"
-    "\tsubq\t$16, %rsp\n"
-    "\tmovl\t%edi, -4(%rbp)\n"
-    "\tmovl\t-4(%rbp), %eax\n"
-    "\tmovl\t%eax, %esi\n"
-    "\tleaq	.LC0(%rip), %rdi\n"
-    "\tmovl	$0, %eax\n"
-    "\tcall	printf@PLT\n" "\tnop\n" "\tleave\n" "\tret\n" "\n",
-    compiler->fileO);
+static int primitiveSize[] = { 0, 0, 1, 4, 8 };
+
+int getPrimitiveSize(int type) {
+  if (type < PRIMITIVE_NONE || type > PRIMITIVE_LONG)
+    fatal("Bad type in cgprimsize()");
+  return primitiveSize[type];
 }
 
-void generateFunctionPreamble(char* name) {
+void generateAssemblyPreamble() {
+  freeRegisters();
+  fputs("\t.text\n", compiler->fileO);
+}
+
+void generateFunctionPreamble(int id) {
+  char* name = globalSymbolTable[id].name;
   fprintf(compiler->fileO,
     "\t.text\n"
     "\t.globl\t%s\n"
@@ -65,10 +61,9 @@ void generateFunctionPreamble(char* name) {
     "\tmovq\t%%rsp, %%rbp\n", name, name, name);
 }
 
-void generateFunctionPostamble() {
-  fputs("\tmovl	$0, %eax\n"
-        "\tpopq	%rbp\n"
-        "\tret\n", compiler->fileO);
+void generateFunctionPostamble(int id) {
+  generateLabel(globalSymbolTable[id].endLabel);
+  fputs("\tpopq %rbp\n" "\tret\n", compiler->fileO);
 }
 
 int generateLoadInteger(int value) {
@@ -213,22 +208,49 @@ void generatePrintInteger(int reg) {
 
 int loadGlobalSymbol(int id) {
   int reg = allocateRegister();
-  if (globalSymbolTable[id].type == PRIMITIVE_INT) fprintf(compiler->fileO, "\tmovq\t%s(\%%rip), %s\n", globalSymbolTable[id].name, registerNames[reg]);
-  else fprintf(compiler->fileO, "\tmovzbq\t%s(\%%rip), %s\n", globalSymbolTable[id].name, registerNames[reg]);
+  switch (globalSymbolTable[id].type) {
+    case PRIMITIVE_CHAR:
+      fprintf(compiler->fileO, "\tmovzbq\t%s(\%%rip), %s\n", globalSymbolTable[id].name,
+	      bregisterNames[reg]);
+      break;
+    case PRIMITIVE_INT:
+      fprintf(compiler->fileO, "\tmovzbl\t%s(\%%rip), %s\n", globalSymbolTable[id].name,
+	      dregisterNames[reg]);
+      break;
+    case PRIMITIVE_LONG:
+      fprintf(compiler->fileO, "\tmovq\t%s(\%%rip), %s\n", globalSymbolTable[id].name, registerNames[reg]);
+      break;
+    default:
+      fatald("Bad type in cgloadglob:", globalSymbolTable[id].type);
+  }
   return reg;
 }
 
 int storeGlobalSymbol(int reg, int id) {
-  if (globalSymbolTable[id].type == PRIMITIVE_INT)
-    fprintf(compiler->fileO, "\tmovq\t%s, %s(\%%rip)\n", registerNames[reg], globalSymbolTable[id].name);
-  else
-    fprintf(compiler->fileO, "\tmovb\t%s, %s(\%%rip)\n", bregisterNames[reg], globalSymbolTable[id].name);
+  switch (globalSymbolTable[id].type) {
+    case PRIMITIVE_CHAR:
+      fprintf(compiler->fileO, "\tmovb\t%s, %s(\%%rip)\n", bregisterNames[reg],
+	      globalSymbolTable[id].name);
+      break;
+    case PRIMITIVE_INT:
+      fprintf(compiler->fileO, "\tmovl\t%s, %s(\%%rip)\n", dregisterNames[reg],
+	      globalSymbolTable[id].name);
+      break;
+    case PRIMITIVE_LONG:
+      fprintf(compiler->fileO, "\tmovq\t%s, %s(\%%rip)\n", registerNames[reg], globalSymbolTable[id].name);
+      break;
+    default:
+      fatald("Bad type in cgloadglob:", globalSymbolTable[id].type);
+  }
   return reg;
 }
 
+
 void generateGlobalSymbol(int id) {
-  if (globalSymbolTable[id].type == PRIMITIVE_INT) fprintf(compiler->fileO, "\t.comm\t%s,8,8\n", globalSymbolTable[id].name);
-  else fprintf(compiler->fileO, "\t.comm\t%s,1,1\n", globalSymbolTable[id].name);
+  int typesize;
+  typesize = getPrimitiveSize(globalSymbolTable[id].type);
+
+  fprintf(compiler->fileO, "\t.comm\t%s,%d,%d\n", globalSymbolTable[id].name, typesize, typesize);
 }
 
 void generateLabel(int label) {
@@ -243,3 +265,28 @@ int generateWiden(int reg, PrimitiveTypes oldType, PrimitiveTypes newType) {
   return reg;
 }
 
+void generateReturn(int reg, int id) {
+  switch (globalSymbolTable[id].type) {
+    case PRIMITIVE_CHAR:
+      fprintf(compiler->fileO, "\tmovzbl\t%s, %%eax\n", bregisterNames[reg]);
+      break;
+    case PRIMITIVE_INT:
+      fprintf(compiler->fileO, "\tmovl\t%s, %%eax\n", dregisterNames[reg]);
+      break;
+    case PRIMITIVE_LONG:
+      fprintf(compiler->fileO, "\tmovq\t%s, %%rax\n", registerNames[reg]);
+      break;
+    default:
+      fatald("Bad function type in cgreturn:", globalSymbolTable[id].type);
+  }
+  generateJump(globalSymbolTable[id].endLabel);
+}
+
+int generateCall(int reg, int id) {
+  int outr = allocateRegister();
+  fprintf(compiler->fileO, "\tmovq\t%s, %%rdi\n", registerNames[reg]);
+  fprintf(compiler->fileO, "\tcall\t%s\n", globalSymbolTable[id].name);
+  fprintf(compiler->fileO, "\tmovq\t%%rax, %s\n", registerNames[outr]);
+  freeRegister(reg);
+  return outr;
+}
