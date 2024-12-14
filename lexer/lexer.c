@@ -142,6 +142,14 @@ bool scan(Token* token) {
     case '/':
       token->type = TOKEN_SLASH;
       break;
+    case '&':
+      if ((c = next()) == '&') {
+        token->type = TOKEN_LOGAND;
+      } else {
+        putback(c);
+        token->type = TOKEN_AMPER;
+      }
+      break;
     case '=':
       if ((c = next()) == '=') {
         token->type = TOKEN_EQ;

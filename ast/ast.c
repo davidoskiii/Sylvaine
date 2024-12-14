@@ -183,6 +183,10 @@ int generateAST(ASTNode* node, int reg, AstNodeOp parentASTOp) {
       return NOREG;
     case AST_CALL:
       return generateCall(leftRegister, node->value.id);
+    case AST_ADDRESS:
+      return generateAddress(node->value.id);
+    case AST_DEREFERENCE:
+      return generateDereference(leftRegister, node->left->type);
     default:
       fprintf(stderr, "Unknown AST operation %d\n", node->op);
       exit(1);

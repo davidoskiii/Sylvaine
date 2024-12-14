@@ -10,6 +10,7 @@ ASTNode* parseFunctionDeclaration();
 ASTNode* parseFunctionCall();
 ASTNode* parseCompoundStatement();
 ASTNode* parseStatement();
+ASTNode* parsePrimaryExpression();
 
 void advance();
 void match(int tokenType, char* expected);

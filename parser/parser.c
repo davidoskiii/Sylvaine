@@ -47,11 +47,25 @@ void parseIdentifier() {
 }
 
 PrimitiveTypes parseType(TokenType token) {
-  if (token == TOKEN_CHAR) return PRIMITIVE_CHAR;
-  if (token == TOKEN_INT)  return PRIMITIVE_INT;
-  if (token == TOKEN_LONG)  return PRIMITIVE_LONG;
-  if (token == TOKEN_VOID) return PRIMITIVE_VOID;
-  fatald("Illegal type, token", token);
+  PrimitiveTypes type;
+  switch (token) {
+    case TOKEN_CHAR: type = PRIMITIVE_CHAR; break;
+    case TOKEN_INT:  type = PRIMITIVE_INT; break;
+    case TOKEN_LONG:  type = PRIMITIVE_LONG; break;
+    case TOKEN_VOID: type = PRIMITIVE_VOID; break;
+    default:
+      fatald("Illegal type, token", token);
+  }
+
+  while (true) {
+    advance();
+    if (compiler->current.type != TOKEN_STAR) {
+      break;
+    }
+    type = pointerTo(type);
+  }
+
+  return type;
 }
 
 static int getOpPrecedence(TokenType tokenType) {
@@ -63,7 +77,42 @@ static int getOpPrecedence(TokenType tokenType) {
   return precedence;
 }
 
-static ASTNode* parsePrimary() {
+ASTNode* parsePrefixExpression() {
+  ASTNode* subtree;
+
+  switch (compiler->current.type) {
+    case TOKEN_AMPER:
+      advance();
+      subtree = parsePrefixExpression();
+
+      if (subtree->op != AST_IDENTIFIER) {
+        fatal("The '&' operator must be followed by an identifier.");
+      }
+
+      subtree->op = AST_ADDRESS;
+      subtree->type = pointerTo(subtree->type);
+      break;
+
+    case TOKEN_STAR:
+      advance();
+      subtree = parsePrefixExpression();
+
+      if (subtree->op != AST_IDENTIFIER && subtree->op != AST_DEREFERENCE) {
+        fatal("The '*' operator must be followed by an identifier or another '*'.");
+      }
+
+      subtree = createUnaryNode(AST_DEREFERENCE, valueAt(subtree->type), subtree, 0);
+      break;
+
+    default:
+      subtree = parsePrimaryExpression();
+      break;
+  }
+
+  return subtree;
+}
+
+ASTNode* parsePrimaryExpression() {
   ASTNode* node;
   int id;
 
@@ -135,7 +184,6 @@ static ASTNode* parseVarDeclaration() {
 
   match(TOKEN_COLON, ":");
   leftType = parseType(compiler->current.type);
-  advance();
 
   id = addGlobalSymbol(buffer, leftType, STRUCTURAL_VARIABLE, 0);
   generateGlobalSymbol(id);
@@ -153,7 +201,7 @@ static ASTNode* parseVarDeclaration() {
     leftType = left->type;
     rightType = right->type;
     if (!typeCompatible(&leftType, &rightType, 1))
-      fatal("Incompatible types");
+      fatal("Incompatible types in parseVarDeclaration()");
 
     if (leftType) left = createUnaryNode(leftType, right->type, left, 0);
 
@@ -194,7 +242,6 @@ ASTNode* parseFunctionDeclaration() {
   match(TOKEN_ARROW, "->");
 
   type = parseType(compiler->current.type);
-  advance();
 
   endLabel = label();
   nameSlot = addGlobalSymbol(buffer, type, STRUCTURAL_FUNCTION, endLabel);
@@ -251,8 +298,9 @@ static ASTNode* parseAssignmentStatement() {
 
   leftType = left->type;
   rightType = right->type;
-  if (!typeCompatible(&leftType, &rightType, 1))
-    fatal("Incompatible types");
+
+  if (!typeCompatible(&leftType, &rightType, 1)) 
+    fatal("Incompatible types in parseAssignmentStatement()");
 
   if (leftType)
     left = createUnaryNode(leftType, right->type, left, 0);
@@ -351,7 +399,7 @@ static ASTNode* parseReturnStatement() {
   returnType = tree->type;
   funcType = globalSymbolTable[compiler->functionId].type;
   if (!typeCompatible(&returnType, &funcType, true))
-    fatal("Incompatible types");
+    fatal("Incompatible types in parseReturnStatement()");
 
   if (returnType) tree = createUnaryNode(returnType, funcType, tree, 0);
 
@@ -417,7 +465,7 @@ ASTNode* parseBinaryExpression(int previousPrecedence) {
   PrimitiveTypes leftType, rightType;
   TokenType tokenType;
 
-  leftNode = parsePrimary();
+  leftNode = parsePrefixExpression();
 
   tokenType = compiler->current.type;
   if (tokenType == TOKEN_SEMICOLON || tokenType == TOKEN_RPAREN)
@@ -431,7 +479,7 @@ ASTNode* parseBinaryExpression(int previousPrecedence) {
     leftType = leftNode->type;
     rightType = rightNode->type;
     if (!typeCompatible(&leftType, &rightType, 0))
-      fatal("Incompatible types");
+      fatal("Incompatible types in parseBinaryExpression()");
 
     if (leftType) leftNode = createUnaryNode(leftType, rightNode->type, leftNode, 0);
     if (rightType) rightNode = createUnaryNode(rightType, leftNode->type, rightNode, 0);

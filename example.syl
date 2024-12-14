@@ -4,9 +4,18 @@ fn fred() -> int {
 
 fn main() -> int {
   let result: int;
+
   printint(10);
+
   result = fred(15);
+
   printint(result);
   printint(fred(15) + 10);
+
+  let x: int = 0;
+  let y: int* = &x;
+
+  printint(&y);
+
   return 0;
 }

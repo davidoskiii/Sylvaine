@@ -34,6 +34,8 @@ typedef enum AstNodeOp {
   AST_WIDEN,
   AST_RETURN,
   AST_CALL,
+  AST_DEREFERENCE,
+  AST_ADDRESS
 } AstNodeOp;
 
 typedef struct ASTNode {

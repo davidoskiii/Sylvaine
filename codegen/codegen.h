@@ -26,6 +26,9 @@ int generateWiden(int reg, PrimitiveTypes oldType, PrimitiveTypes newType);
 void generateReturn(int reg, int id);
 int generateCall(int reg, int id);
 
+int generateAddress(int id);
+int generateDereference(int reg, PrimitiveTypes type);
+
 void generatePrintInteger(int reg);
 
 int loadGlobalSymbol(int id);

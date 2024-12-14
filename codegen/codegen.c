@@ -40,7 +40,7 @@ static void freeRegister(int reg) {
 static int primitiveSize[] = { 0, 0, 1, 4, 8 };
 
 int getPrimitiveSize(int type) {
-  if (type < PRIMITIVE_NONE || type > PRIMITIVE_LONG)
+  if (type < PRIMITIVE_NONE || type > PRIMITIVE_LONG_POINTER)
     fatal("Bad type in cgprimsize()");
   return primitiveSize[type];
 }
@@ -218,10 +218,13 @@ int loadGlobalSymbol(int id) {
 	      dregisterNames[reg]);
       break;
     case PRIMITIVE_LONG:
+    case PRIMITIVE_CHAR_POINTER:
+    case PRIMITIVE_INT_POINTER:
+    case PRIMITIVE_LONG_POINTER:
       fprintf(compiler->fileO, "\tmovq\t%s(\%%rip), %s\n", globalSymbolTable[id].name, registerNames[reg]);
       break;
     default:
-      fatald("Bad type in cgloadglob:", globalSymbolTable[id].type);
+      fatald("Bad type in cgloadglob", globalSymbolTable[id].type);
   }
   return reg;
 }
@@ -237,10 +240,13 @@ int storeGlobalSymbol(int reg, int id) {
 	      globalSymbolTable[id].name);
       break;
     case PRIMITIVE_LONG:
+    case PRIMITIVE_CHAR_POINTER:
+    case PRIMITIVE_INT_POINTER:
+    case PRIMITIVE_LONG_POINTER:
       fprintf(compiler->fileO, "\tmovq\t%s, %s(\%%rip)\n", registerNames[reg], globalSymbolTable[id].name);
       break;
     default:
-      fatald("Bad type in cgloadglob:", globalSymbolTable[id].type);
+      fatald("Bad type in cgstoreglob", globalSymbolTable[id].type);
   }
   return reg;
 }
@@ -289,4 +295,24 @@ int generateCall(int reg, int id) {
   fprintf(compiler->fileO, "\tmovq\t%%rax, %s\n", registerNames[outr]);
   freeRegister(reg);
   return outr;
+}
+
+int generateAddress(int id) {
+  int reg = allocateRegister();
+
+  fprintf(compiler->fileO, "\tleaq\t%s(%%rip), %s\n", globalSymbolTable[id].name, registerNames[reg]);
+  return reg;
+}
+
+int generateDereference(int reg, PrimitiveTypes type) {
+  switch (type) {
+    case PRIMITIVE_CHAR_POINTER:
+      fprintf(compiler->fileO, "\tmovzbq\t(%s), %s\n", registerNames[reg], registerNames[reg]);
+      break;
+    case PRIMITIVE_INT_POINTER:
+    case PRIMITIVE_LONG_POINTER:
+      fprintf(compiler->fileO, "\tmovq\t(%s), %s\n", registerNames[reg], registerNames[reg]);
+      break;
+  }
+  return reg;
 }

@@ -11,7 +11,12 @@ typedef enum PrimitiveTypes {
   PRIMITIVE_VOID,
   PRIMITIVE_CHAR,
   PRIMITIVE_INT,
-  PRIMITIVE_LONG
+  PRIMITIVE_LONG,
+
+  PRIMITIVE_VOID_POINTER,
+  PRIMITIVE_CHAR_POINTER,
+  PRIMITIVE_INT_POINTER,
+  PRIMITIVE_LONG_POINTER
 } PrimitiveTypes;
 
 typedef enum StructuralTypes {
@@ -20,5 +25,7 @@ typedef enum StructuralTypes {
 } StructuralTypes;
 
 int typeCompatible(PrimitiveTypes* left, PrimitiveTypes* right, int onlyRight);
+PrimitiveTypes pointerTo(PrimitiveTypes type);
+PrimitiveTypes valueAt(PrimitiveTypes type);
 
 #endif
