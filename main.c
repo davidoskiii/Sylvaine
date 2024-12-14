@@ -47,7 +47,7 @@ int main(int argc, char *argv[]) {
   advance();
   generateAssemblyPreamble();
   while (true) {
-    tree = parseFunctionDeclaration();
+    tree = parseGlobalDeclarations();
     generateAST(tree, NOREG, 0);
     if (compiler->current.type == TOKEN_EOF) break;
   }

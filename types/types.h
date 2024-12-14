@@ -24,7 +24,7 @@ typedef enum StructuralTypes {
   STRUCTURAL_FUNCTION
 } StructuralTypes;
 
-int typeCompatible(PrimitiveTypes* left, PrimitiveTypes* right, int onlyRight);
+bool typeCompatible(PrimitiveTypes* left, PrimitiveTypes* right, bool onlyRight);
 PrimitiveTypes pointerTo(PrimitiveTypes type);
 PrimitiveTypes valueAt(PrimitiveTypes type);
 

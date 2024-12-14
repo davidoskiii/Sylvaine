@@ -4,12 +4,12 @@
 #include "../common.h"
 #include "types.h"
 
-int typeCompatible(PrimitiveTypes* left, PrimitiveTypes* right, int onlyRight) {
+bool typeCompatible(PrimitiveTypes* left, PrimitiveTypes* right, bool onlyRight) {
   // Same types are compatible
   if (*left == *right) {
     *left = PRIMITIVE_NONE;
     *right = PRIMITIVE_NONE;
-    return 1;
+    return true;
   }
 
   int leftSize = getPrimitiveSize(*left);
@@ -17,30 +17,29 @@ int typeCompatible(PrimitiveTypes* left, PrimitiveTypes* right, int onlyRight) {
 
   // Types with zero size are incompatible
   if (leftSize == 0 || rightSize == 0) {
-    printf("??\n");
-    return 0;
+    return false;
   }
 
   // Widen smaller types to match larger types
   if (leftSize < rightSize) {
     *left = AST_WIDEN;
     *right = PRIMITIVE_NONE;
-    return 1;
+    return true;
   }
 
   if (rightSize < leftSize) {
     if (onlyRight) {
-      return 0;
+      return false;
     }
     *left = PRIMITIVE_NONE;
     *right = AST_WIDEN;
-    return 1;
+    return true;
   }
 
   // Types of the same size are compatible
   *left = PRIMITIVE_NONE;
   *right = PRIMITIVE_NONE;
-  return 1;
+  return true;
 }
 
 PrimitiveTypes pointerTo(PrimitiveTypes type) {

@@ -7,6 +7,7 @@ void freeRegisters();
 int getPrimitiveSize(int type);
 
 void generateAssemblyPreamble();
+void generateAssemblyPostamble();
 void generateFunctionPreamble(int id);
 void generateFunctionPostamble(int id);
 

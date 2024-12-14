@@ -152,7 +152,7 @@ static ASTNode* parsePrintStatement() {
   tree = parseBinaryExpression(0);
 
   rightType = tree->type;
-  if (!typeCompatible(&leftType, &rightType, 0)) {
+  if (!typeCompatible(&leftType, &rightType, false)) {
     fatal("Incompatible types in print statement");
   }
 
@@ -165,7 +165,19 @@ static ASTNode* parsePrintStatement() {
   return tree;
 }
 
-static ASTNode* parseVarDeclaration() {
+ASTNode* parseGlobalDeclarations() {
+  ASTNode* tree;
+
+  if (compiler->current.type == TOKEN_FN) {
+    tree = parseFunctionDeclaration();
+  } else if (compiler->current.type == TOKEN_LET) {
+    tree = parseVarDeclaration();
+  }
+
+  return tree;
+}
+
+ASTNode* parseVarDeclaration() {
   ASTNode *left, *right, *tree;
   int id;
   PrimitiveTypes leftType, rightType;
@@ -200,7 +212,7 @@ static ASTNode* parseVarDeclaration() {
 
     leftType = left->type;
     rightType = right->type;
-    if (!typeCompatible(&leftType, &rightType, 1))
+    if (!typeCompatible(&leftType, &rightType, true))
       fatal("Incompatible types in parseVarDeclaration()");
 
     if (leftType) left = createUnaryNode(leftType, right->type, left, 0);
@@ -299,7 +311,7 @@ static ASTNode* parseAssignmentStatement() {
   leftType = left->type;
   rightType = right->type;
 
-  if (!typeCompatible(&leftType, &rightType, 1)) 
+  if (!typeCompatible(&leftType, &rightType, true)) 
     fatal("Incompatible types in parseAssignmentStatement()");
 
   if (leftType)
@@ -478,7 +490,7 @@ ASTNode* parseBinaryExpression(int previousPrecedence) {
 
     leftType = leftNode->type;
     rightType = rightNode->type;
-    if (!typeCompatible(&leftType, &rightType, 0))
+    if (!typeCompatible(&leftType, &rightType, false))
       fatal("Incompatible types in parseBinaryExpression()");
 
     if (leftType) leftNode = createUnaryNode(leftType, rightNode->type, leftNode, 0);

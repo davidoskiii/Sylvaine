@@ -3,14 +3,16 @@
 
 #include "../ast/ast.h"
 
-ASTNode* parseBinaryExpression(int previousPrecedence);
 void parseStatements();
 
+ASTNode* parseBinaryExpression(int previousPrecedence);
+ASTNode* parseGlobalDeclarations();
 ASTNode* parseFunctionDeclaration();
 ASTNode* parseFunctionCall();
 ASTNode* parseCompoundStatement();
 ASTNode* parseStatement();
 ASTNode* parsePrimaryExpression();
+ASTNode* parseVarDeclaration();
 
 void advance();
 void match(int tokenType, char* expected);

@@ -50,6 +50,9 @@ void generateAssemblyPreamble() {
   fputs("\t.text\n", compiler->fileO);
 }
 
+void generateAssemblyPostamble() {
+}
+
 void generateFunctionPreamble(int id) {
   char* name = globalSymbolTable[id].name;
   fprintf(compiler->fileO,
