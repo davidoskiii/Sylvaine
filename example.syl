@@ -1,10 +1,11 @@
-let a: int;
+let c: int;
+let d: int;
+let e: int*;
+let f: int;
 
 fn main() -> int {
-  let x: char = 10;
-
-  printint(a);
-  printint(x);
+  c = 12; d =18; printint(c);
+  e = &c + 1; f = *e; printint(f);
 
   return 0;
 }
