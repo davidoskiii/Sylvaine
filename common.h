@@ -14,6 +14,7 @@
 typedef struct Compiler {
   int line;
   int putback;
+  int depth;
   char buffer[TEXTLEN + 1];
 
   Token current;

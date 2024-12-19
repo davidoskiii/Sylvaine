@@ -32,6 +32,7 @@ typedef enum AstNodeOp {
   AST_WHILE,
   AST_FUNCTION,
   AST_WIDEN,
+  AST_SCALE,
   AST_RETURN,
   AST_CALL,
   AST_DEREFERENCE,
@@ -40,19 +41,20 @@ typedef enum AstNodeOp {
 
 typedef struct ASTNode {
   AstNodeOp op;
-  PrimitiveTypes type;
+  PrimitiveType type;
   struct ASTNode* left;
   struct ASTNode* mid;
   struct ASTNode* right;
   union {
     int intvalue;
     int id;
+    int size;
   } value;
 } ASTNode;
 
-ASTNode* createNode(AstNodeOp op, PrimitiveTypes type, ASTNode* left, ASTNode* mid, ASTNode* right, int value);
-ASTNode* createLeafNode(AstNodeOp op, PrimitiveTypes type, int value);
-ASTNode* createUnaryNode(AstNodeOp op, PrimitiveTypes type, ASTNode* child, int value);
+ASTNode* createNode(AstNodeOp op, PrimitiveType type, ASTNode* left, ASTNode* mid, ASTNode* right, int value);
+ASTNode* createLeafNode(AstNodeOp op, PrimitiveType type, int value);
+ASTNode* createUnaryNode(AstNodeOp op, PrimitiveType type, ASTNode* child, int value);
 AstNodeOp getArithmeticOperation(TokenType token);
 
 int label();

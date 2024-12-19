@@ -14,6 +14,7 @@ static void init() {
   compiler = ALLOCATE(Compiler);
 
   compiler->line = 1;
+  compiler->depth = 0;
   compiler->putback = '\n';
   compiler->fileI = NULL;
   compiler->fileO = NULL;
@@ -48,7 +49,7 @@ int main(int argc, char *argv[]) {
   generateAssemblyPreamble();
   while (true) {
     tree = parseGlobalDeclarations();
-    generateAST(tree, NOREG, 0);
+    if (tree != NULL) generateAST(tree, NOREG, 0);
     if (compiler->current.type == TOKEN_EOF) break;
   }
 

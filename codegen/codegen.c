@@ -12,6 +12,8 @@ static char* registerNames[4] = { "%r8", "%r9", "%r10", "%r11" };
 static char* bregisterNames[4] = { "%r8b", "%r9b", "%r10b", "%r11b" };
 static char* dregisterNames[4] = { "%r8d", "%r9d", "%r10d", "%r11d" };
 
+static int primitiveSize[] = { 0, 0, 1, 4, 8, 8, 8, 8, 8 };
+
 void freeRegisters() {
   for (int i = 0; i < 4; i++) {
     registerAvailability[i] = true;
@@ -25,8 +27,8 @@ static int allocateRegister() {
       return i;
     }
   }
-  fprintf(stderr, "Error: Out of registers!\n");
-  exit(1);
+  fatal("Out of registers!");
+  return NOREG;
 }
 
 static void freeRegister(int reg) {
@@ -36,8 +38,6 @@ static void freeRegister(int reg) {
   }
   registerAvailability[reg] = true;
 }
-
-static int primitiveSize[] = { 0, 0, 1, 4, 8 };
 
 int getPrimitiveSize(int type) {
   if (type < PRIMITIVE_NONE || type > PRIMITIVE_LONG_POINTER)
@@ -214,7 +214,7 @@ int loadGlobalSymbol(int id) {
   switch (globalSymbolTable[id].type) {
     case PRIMITIVE_CHAR:
       fprintf(compiler->fileO, "\tmovzbq\t%s(\%%rip), %s\n", globalSymbolTable[id].name,
-	      bregisterNames[reg]);
+	      registerNames[reg]);
       break;
     case PRIMITIVE_INT:
       fprintf(compiler->fileO, "\tmovzbl\t%s(\%%rip), %s\n", globalSymbolTable[id].name,
@@ -256,10 +256,16 @@ int storeGlobalSymbol(int reg, int id) {
 
 
 void generateGlobalSymbol(int id) {
-  int typesize;
-  typesize = getPrimitiveSize(globalSymbolTable[id].type);
+  int typeSize;
+  typeSize = getPrimitiveSize(globalSymbolTable[id].type);
 
-  fprintf(compiler->fileO, "\t.comm\t%s,%d,%d\n", globalSymbolTable[id].name, typesize, typesize);
+  fprintf(compiler->fileO, "\t.data\n" "\t.globl\t%s\n", globalSymbolTable[id].name);
+  switch(typeSize) {
+    case 1: fprintf(compiler->fileO, "%s:\t.byte\t0\n", globalSymbolTable[id].name); break;
+    case 4: fprintf(compiler->fileO, "%s:\t.long\t0\n", globalSymbolTable[id].name); break;
+    case 8: fprintf(compiler->fileO, "%s:\t.quad\t0\n", globalSymbolTable[id].name); break;
+    default: fatald("Unknown typesize in cgglobsym: ", typeSize);
+  }
 }
 
 void generateLabel(int label) {
@@ -270,7 +276,7 @@ void generateJump(int label) {
   fprintf(compiler->fileO, "\tjmp\tL%d\n", label);
 }
 
-int generateWiden(int reg, PrimitiveTypes oldType, PrimitiveTypes newType) {
+int generateWiden(int reg, PrimitiveType oldType, PrimitiveType newType) {
   return reg;
 }
 
@@ -307,7 +313,7 @@ int generateAddress(int id) {
   return reg;
 }
 
-int generateDereference(int reg, PrimitiveTypes type) {
+int generateDereference(int reg, PrimitiveType type) {
   switch (type) {
     case PRIMITIVE_CHAR_POINTER:
       fprintf(compiler->fileO, "\tmovzbq\t(%s), %s\n", registerNames[reg], registerNames[reg]);
@@ -317,5 +323,10 @@ int generateDereference(int reg, PrimitiveTypes type) {
       fprintf(compiler->fileO, "\tmovq\t(%s), %s\n", registerNames[reg], registerNames[reg]);
       break;
   }
+  return reg;
+}
+
+int generateShiftLeftConstant(int reg, int shift) {
+  fprintf(compiler->fileO, "\tsalq\t$%d, %s\n", shift, registerNames[reg]);
   return reg;
 }

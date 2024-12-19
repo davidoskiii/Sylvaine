@@ -23,12 +23,13 @@ int compareAndJump(int ASTop, int reg1, int reg2, int label);
 void generateLabel(int label);
 void generateJump(int label);
 
-int generateWiden(int reg, PrimitiveTypes oldType, PrimitiveTypes newType);
+int generateWiden(int reg, PrimitiveType oldType, PrimitiveType newType);
 void generateReturn(int reg, int id);
 int generateCall(int reg, int id);
 
 int generateAddress(int id);
-int generateDereference(int reg, PrimitiveTypes type);
+int generateDereference(int reg, PrimitiveType type);
+int generateShiftLeftConstant(int reg, int shift);
 
 void generatePrintInteger(int reg);
 

@@ -6,7 +6,9 @@
 
 #include "../common.h"
 
-typedef enum PrimitiveTypes {
+typedef struct ASTNode ASTNode;
+
+typedef enum PrimitiveType {
   PRIMITIVE_NONE,
   PRIMITIVE_VOID,
   PRIMITIVE_CHAR,
@@ -17,15 +19,18 @@ typedef enum PrimitiveTypes {
   PRIMITIVE_CHAR_POINTER,
   PRIMITIVE_INT_POINTER,
   PRIMITIVE_LONG_POINTER
-} PrimitiveTypes;
+} PrimitiveType;
 
-typedef enum StructuralTypes {
+typedef enum StructuralType {
   STRUCTURAL_VARIABLE,
   STRUCTURAL_FUNCTION
-} StructuralTypes;
+} StructuralType;
 
-bool typeCompatible(PrimitiveTypes* left, PrimitiveTypes* right, bool onlyRight);
-PrimitiveTypes pointerTo(PrimitiveTypes type);
-PrimitiveTypes valueAt(PrimitiveTypes type);
+bool isIntegerType(PrimitiveType type);
+bool isPointerType(PrimitiveType type);
+PrimitiveType toPointerType(PrimitiveType type);
+PrimitiveType toValueType(PrimitiveType type);
+PrimitiveType dereferencePointerType(PrimitiveType type);
+ASTNode* adjustType(ASTNode* tree, PrimitiveType targetType, int binaryOp);
 
 #endif

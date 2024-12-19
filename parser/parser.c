@@ -5,6 +5,7 @@
 #include "parser.h"
 #include "../common.h"
 #include "../lexer/lexer.h"
+#include "../types/types.h"
 #include "../misc/misc.h"
 #include "../symbol/symbol.h"
 #include "../codegen/codegen.h"
@@ -46,8 +47,8 @@ void parseIdentifier() {
   match(TOKEN_IDENTIFIER, "identifier");
 }
 
-PrimitiveTypes parseType(TokenType token) {
-  PrimitiveTypes type;
+PrimitiveType parseType(TokenType token) {
+  PrimitiveType type;
   switch (token) {
     case TOKEN_CHAR: type = PRIMITIVE_CHAR; break;
     case TOKEN_INT:  type = PRIMITIVE_INT; break;
@@ -62,7 +63,7 @@ PrimitiveTypes parseType(TokenType token) {
     if (compiler->current.type != TOKEN_STAR) {
       break;
     }
-    type = pointerTo(type);
+    type = toPointerType(type);
   }
 
   return type;
@@ -90,7 +91,7 @@ ASTNode* parsePrefixExpression() {
       }
 
       subtree->op = AST_ADDRESS;
-      subtree->type = pointerTo(subtree->type);
+      subtree->type = toPointerType(subtree->type);
       break;
 
     case TOKEN_STAR:
@@ -101,7 +102,7 @@ ASTNode* parsePrefixExpression() {
         fatal("The '*' operator must be followed by an identifier or another '*'.");
       }
 
-      subtree = createUnaryNode(AST_DEREFERENCE, valueAt(subtree->type), subtree, 0);
+      subtree = createUnaryNode(AST_DEREFERENCE, toValueType(subtree->type), subtree, 0);
       break;
 
     default:
@@ -144,20 +145,15 @@ ASTNode* parsePrimaryExpression() {
 
 static ASTNode* parsePrintStatement() {
   ASTNode* tree;
-  PrimitiveTypes leftType = PRIMITIVE_INT;
-  PrimitiveTypes rightType;
   
   match(TOKEN_PRINT, "print");
 
   tree = parseBinaryExpression(0);
 
-  rightType = tree->type;
-  if (!typeCompatible(&leftType, &rightType, false)) {
-    fatal("Incompatible types in print statement");
-  }
+  tree = adjustType(tree, PRIMITIVE_INT, false);
 
-  if (rightType) {
-    tree = createUnaryNode(rightType, PRIMITIVE_INT, tree, 0);
+  if (tree == NULL) {
+    fatal("Incompatible types in print statement");
   }
 
   tree = createUnaryNode(AST_PRINT, PRIMITIVE_NONE, tree, 0);
@@ -166,21 +162,22 @@ static ASTNode* parsePrintStatement() {
 }
 
 ASTNode* parseGlobalDeclarations() {
-  ASTNode* tree;
-
-  if (compiler->current.type == TOKEN_FN) {
-    tree = parseFunctionDeclaration();
-  } else if (compiler->current.type == TOKEN_LET) {
-    tree = parseVarDeclaration();
+  switch (compiler->current.type) {
+    case TOKEN_FN: return parseFunctionDeclaration();
+    case TOKEN_LET: {
+      ASTNode* tree = parseVarDeclaration();
+      if (tree != NULL) match(TOKEN_SEMICOLON, ";");
+      return tree;
+    }
+    default:
+      fatald("Syntax error, token", compiler->current.type);
   }
-
-  return tree;
 }
 
 ASTNode* parseVarDeclaration() {
   ASTNode *left, *right, *tree;
   int id;
-  PrimitiveTypes leftType, rightType;
+  PrimitiveType type;
 
   match(TOKEN_LET, "let");
   
@@ -195,27 +192,25 @@ ASTNode* parseVarDeclaration() {
   strcpy(buffer, compiler->buffer);
 
   match(TOKEN_COLON, ":");
-  leftType = parseType(compiler->current.type);
+  type = parseType(compiler->current.type);
 
-  id = addGlobalSymbol(buffer, leftType, STRUCTURAL_VARIABLE, 0);
+  id = addGlobalSymbol(buffer, type, STRUCTURAL_VARIABLE, 0);
   generateGlobalSymbol(id);
 
-  if ((id = findGlobalSymbol(buffer)) == -1) {
-    fatals("Undeclared variable", buffer);
-  }
-  right = createLeafNode(AST_LVIDENT, globalSymbolTable[id].type, id);
-
   if (check(TOKEN_EQUAL)) {
+    if (compiler->depth == 0) fatal("Can't inizialize a global variable");
     match(TOKEN_EQUAL, "=");
+
+    if ((id = findGlobalSymbol(buffer)) == -1) {
+      fatals("Undeclared variable", buffer);
+    }
+    right = createLeafNode(AST_LVIDENT, type, id);
 
     left = parseBinaryExpression(0);
 
-    leftType = left->type;
-    rightType = right->type;
-    if (!typeCompatible(&leftType, &rightType, true))
+    left = adjustType(left, right->type, false);
+    if (left == NULL)
       fatal("Incompatible types in parseVarDeclaration()");
-
-    if (leftType) left = createUnaryNode(leftType, right->type, left, 0);
 
     tree = createNode(AST_ASSIGN, PRIMITIVE_INT, left, NULL, right, 0);
 
@@ -234,7 +229,7 @@ ASTNode* parseVarDeclaration() {
 ASTNode* parseFunctionDeclaration() {
   ASTNode *tree, *finalStatement;
   int nameSlot, endLabel;
-  PrimitiveTypes type;
+  PrimitiveType type;
 
   match(TOKEN_FN, "fn");
 
@@ -291,7 +286,6 @@ ASTNode* parseFunctionCall() {
 
 static ASTNode* parseAssignmentStatement() {
   ASTNode *left, *right, *tree;
-  PrimitiveTypes leftType, rightType;
   int id;
 
   parseIdentifier();
@@ -308,14 +302,9 @@ static ASTNode* parseAssignmentStatement() {
 
   left = parseBinaryExpression(0);
 
-  leftType = left->type;
-  rightType = right->type;
-
-  if (!typeCompatible(&leftType, &rightType, true)) 
-    fatal("Incompatible types in parseAssignmentStatement()");
-
-  if (leftType)
-    left = createUnaryNode(leftType, right->type, left, 0);
+  left = adjustType(left, right->type, false);
+  if (left == NULL)
+    fatal("Incompatible types in parseVarDeclaration()");
 
   tree = createNode(AST_ASSIGN, PRIMITIVE_INT, left, NULL, right, 0);
 
@@ -399,7 +388,6 @@ static ASTNode* parseForStatement() {
 
 static ASTNode* parseReturnStatement() {
   ASTNode* tree;
-  PrimitiveTypes returnType, funcType;
 
   if (globalSymbolTable[compiler->functionId].type == PRIMITIVE_VOID)
     fatal("Can't return from a void function");
@@ -408,12 +396,9 @@ static ASTNode* parseReturnStatement() {
 
   tree = parseBinaryExpression(0);
 
-  returnType = tree->type;
-  funcType = globalSymbolTable[compiler->functionId].type;
-  if (!typeCompatible(&returnType, &funcType, true))
-    fatal("Incompatible types in parseReturnStatement()");
-
-  if (returnType) tree = createUnaryNode(returnType, funcType, tree, 0);
+  tree = adjustType(tree, globalSymbolTable[compiler->functionId].type, false);
+  if (tree == NULL)
+    fatal("Incompatible types in parseVarDeclaration()");
 
   tree = createUnaryNode(AST_RETURN, PRIMITIVE_NONE, tree, 0);
 
@@ -446,6 +431,7 @@ ASTNode* parseCompoundStatement() {
   ASTNode* tree;
 
   match(TOKEN_LBRACE, "{");
+  compiler->depth++;
 
   while (true) {
     tree = parseStatement();
@@ -467,6 +453,7 @@ ASTNode* parseCompoundStatement() {
 
     if (compiler->current.type == TOKEN_RBRACE) {
       match(TOKEN_RBRACE, "}");
+      compiler->depth--;
       return left;
     }
   }
@@ -474,7 +461,8 @@ ASTNode* parseCompoundStatement() {
 
 ASTNode* parseBinaryExpression(int previousPrecedence) {
   ASTNode *leftNode, *rightNode;
-  PrimitiveTypes leftType, rightType;
+  ASTNode *lTemp, *rTemp;
+  AstNodeOp ASTop;
   TokenType tokenType;
 
   leftNode = parsePrefixExpression();
@@ -488,13 +476,15 @@ ASTNode* parseBinaryExpression(int previousPrecedence) {
 
     rightNode = parseBinaryExpression(OpPrec[tokenType]);
 
-    leftType = leftNode->type;
-    rightType = rightNode->type;
-    if (!typeCompatible(&leftType, &rightType, false))
-      fatal("Incompatible types in parseBinaryExpression()");
-
-    if (leftType) leftNode = createUnaryNode(leftType, rightNode->type, leftNode, 0);
-    if (rightType) rightNode = createUnaryNode(rightType, leftNode->type, rightNode, 0);
+    ASTop = getArithmeticOperation(tokenType);
+    lTemp = adjustType(leftNode, rightNode->type, ASTop);
+    rTemp = adjustType(rightNode, leftNode->type, ASTop);
+    if (lTemp == NULL && rTemp == NULL)
+      fatal("Incompatible types in binary expression");
+    if (lTemp != NULL)
+      leftNode = lTemp;
+    if (rTemp != NULL)
+      rightNode = rTemp;
 
     leftNode = createNode(getArithmeticOperation(tokenType), leftNode->type, leftNode, NULL, rightNode, 0);
 

@@ -5,7 +5,7 @@
 #include "../symbol/symbol.h"
 #include "../codegen/codegen.h"
 
-ASTNode* createNode(AstNodeOp op, PrimitiveTypes type, ASTNode* left, ASTNode* mid, ASTNode* right, int value) {
+ASTNode* createNode(AstNodeOp op, PrimitiveType type, ASTNode* left, ASTNode* mid, ASTNode* right, int value) {
   ASTNode* node = ALLOCATE(ASTNode);
 
   if (node == NULL) {
@@ -24,12 +24,12 @@ ASTNode* createNode(AstNodeOp op, PrimitiveTypes type, ASTNode* left, ASTNode* m
 
 
 // Create an AST leaf node
-ASTNode* createLeafNode(AstNodeOp op, PrimitiveTypes type, int value) {
+ASTNode* createLeafNode(AstNodeOp op, PrimitiveType type, int value) {
   return createNode(op, type, NULL, NULL, NULL, value);
 }
 
 // Create a unary AST node with one child
-ASTNode* createUnaryNode(AstNodeOp op, PrimitiveTypes type, ASTNode* child, int value) {
+ASTNode* createUnaryNode(AstNodeOp op, PrimitiveType type, ASTNode* child, int value) {
   return createNode(op, type, child, NULL, NULL, value);
 }
 
@@ -178,6 +178,19 @@ int generateAST(ASTNode* node, int reg, AstNodeOp parentASTOp) {
       return NOREG;
     case AST_WIDEN:
       return generateWiden(leftRegister, node->left->type, node->type);
+    case AST_SCALE:
+      /* Small optimisation: use shift if the
+         scale value is a known power of two */
+      switch (node->value.size) {
+	      case 2: return(generateShiftLeftConstant(leftRegister, 1));
+	      case 4: return(generateShiftLeftConstant(leftRegister, 2));
+	      case 8: return(generateShiftLeftConstant(leftRegister, 3));
+	      default:
+	        /* Load a register with the size and
+	           multiply the leftreg by this size */
+          rightRegister = generateLoadInteger(node->value.size);
+          return generateMultiplication(leftRegister, rightRegister);
+      }
     case AST_RETURN:
       generateReturn(leftRegister, compiler->functionId);
       return NOREG;

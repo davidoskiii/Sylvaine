@@ -26,7 +26,7 @@ static int createNewGlobal() {
   return position;
 }
 
-int addGlobalSymbol(char* name, PrimitiveTypes type, StructuralTypes stype, int endLabel) {
+int addGlobalSymbol(char* name, PrimitiveType type, StructuralType stype, int endLabel) {
   int slot;
 
   if ((slot = findGlobalSymbol(name)) != -1)
